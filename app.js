@@ -1,6 +1,6 @@
-const assetPath = "./assets/hero-forest-bells.png";
+const assetPath = "./assets/forest-bell-dark.png";
 
-const products = [
+let products = [
   {
     id: "walnut-bell",
     name: "核桃平安铃",
@@ -99,7 +99,7 @@ const products = [
   },
 ];
 
-const cases = [
+let cases = [
   {
     id: "new-car",
     title: "新车平安礼",
@@ -153,11 +153,21 @@ const state = {
   productQuery: "",
   orderTab: "全部",
   toastTimer: null,
+  apiOnline: false,
+  agentMessages: [
+    {
+      role: "assistant",
+      content: "你好，我是果壳铃小助手。可以帮你选款、查现货、看门店信息，也能引导定制咨询和到店预约。",
+      quickReplies: ["推荐送礼款", "看现货", "到店预约", "怎么定制"],
+      products: [],
+    },
+  ],
+  agentLoading: false,
 };
 
 const productFilterLabels = ["全部", "果壳铃", "包挂", "车挂", "礼盒", "定制"];
 const caseFilterLabels = ["全部", "车挂", "包挂", "礼盒", "门店"];
-const orders = [
+let orders = [
   {
     id: "order-pay",
     status: "待付款",
@@ -201,7 +211,7 @@ const orders = [
     thumbY: "78%",
   },
 ];
-const storeInfo = {
+let storeInfo = {
   name: "果壳铃手作铺杭州工作室",
   address: "杭州市西湖区灵隐路 88 号手作工作室",
   longitude: 120.127,
@@ -221,11 +231,78 @@ const nodes = {
   sheet: document.getElementById("sheet"),
   sheetTitle: document.getElementById("sheetTitle"),
   sheetContent: document.getElementById("sheetContent"),
+  agentPanel: document.getElementById("agentPanel"),
+  agentMessages: document.getElementById("agentMessages"),
+  agentQuick: document.getElementById("agentQuick"),
+  agentForm: document.getElementById("agentForm"),
+  agentInput: document.getElementById("agentInput"),
   toast: document.getElementById("toast"),
 };
 
 function money(value) {
   return `¥${value}`;
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => {
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return map[char];
+  });
+}
+
+function getApiBase() {
+  if (window.location.protocol === "file:") {
+    return "http://localhost:3000/api";
+  }
+  return `${window.location.origin}/api`;
+}
+
+const API_BASE = getApiBase();
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || "请求失败");
+  }
+  return data;
+}
+
+async function loadRemoteData() {
+  try {
+    const data = await apiRequest("/bootstrap");
+    products = Array.isArray(data.products) ? data.products : products;
+    cases = Array.isArray(data.cases) ? data.cases : cases;
+    orders = Array.isArray(data.orders) ? data.orders : orders;
+    storeInfo = data.storeInfo ? { ...storeInfo, ...data.storeInfo } : storeInfo;
+    state.apiOnline = true;
+  } catch (error) {
+    state.apiOnline = false;
+    console.warn("后端暂未启动，继续使用页面内置数据。", error);
+  }
+}
+
+async function refreshOrders() {
+  if (!state.apiOnline) return;
+  try {
+    orders = await apiRequest("/orders");
+    renderOrders();
+  } catch (error) {
+    console.warn("订单刷新失败。", error);
+  }
 }
 
 function findProduct(id) {
@@ -256,20 +333,20 @@ function renderProductCard(product, options = {}) {
   const compact = options.compact ? " compact-card" : "";
   const visibleTags = product.tags.slice(0, 2);
   return `
-    <article class="product-card${compact}" data-product-card="${product.id}">
-      <div class="product-thumb" style="--thumb-x: ${product.thumbX}; --thumb-y: ${product.thumbY};">
-        <span class="pill light">${product.type}</span>
+    <article class="product-card${compact}" data-product-card="${escapeHtml(product.id)}">
+      <div class="product-thumb" style="--thumb-x: ${escapeHtml(product.thumbX)}; --thumb-y: ${escapeHtml(product.thumbY)};">
+        <span class="pill light">${escapeHtml(product.type)}</span>
       </div>
       <div class="product-body">
         <div class="product-title-row">
-          <h4>${product.name}</h4>
+          <h4>${escapeHtml(product.name)}</h4>
           <span class="price">${money(product.price)}</span>
         </div>
-        <div class="tag-row">${visibleTags.map((tag) => `<span>${tag}</span>`).join("")}</div>
-        <p>${product.story}</p>
+        <div class="tag-row">${visibleTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+        <p>${escapeHtml(product.story)}</p>
         <div class="card-actions">
-          <button type="button" data-action="open-consult" data-product-id="${product.id}">问定制</button>
-          <button type="button" data-action="open-product" data-product-id="${product.id}">看详情</button>
+          <button type="button" data-action="open-consult" data-product-id="${escapeHtml(product.id)}">问定制</button>
+          <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">看详情</button>
         </div>
       </div>
     </article>
@@ -281,18 +358,18 @@ function renderCaseCard(item, options = {}) {
   const visibleRelated = related.slice(0, 2);
   const compactClass = options.strip ? " strip-card" : "";
   return `
-    <article class="case-card${compactClass}" data-case-card="${item.id}">
-      <div class="case-thumb" style="--thumb-x: ${item.thumbX}; --thumb-y: ${item.thumbY};">
-        <span class="pill light">${item.type}</span>
+    <article class="case-card${compactClass}" data-case-card="${escapeHtml(item.id)}">
+      <div class="case-thumb" style="--thumb-x: ${escapeHtml(item.thumbX)}; --thumb-y: ${escapeHtml(item.thumbY)};">
+        <span class="pill light">${escapeHtml(item.type)}</span>
       </div>
       <div class="case-body">
         <div class="case-title-row">
-          <h4>${item.title}</h4>
+          <h4>${escapeHtml(item.title)}</h4>
         </div>
-        <p>${item.summary}</p>
-        <div class="tag-row">${visibleRelated.map((product) => `<span>${product.name}</span>`).join("")}</div>
+        <p>${escapeHtml(item.summary)}</p>
+        <div class="tag-row">${visibleRelated.map((product) => `<span>${escapeHtml(product.name)}</span>`).join("")}</div>
         <div class="card-actions">
-          <button type="button" data-action="open-case" data-case-id="${item.id}">查看方案</button>
+          <button type="button" data-action="open-case" data-case-id="${escapeHtml(item.id)}">查看方案</button>
         </div>
       </div>
     </article>
@@ -303,8 +380,8 @@ function renderFilters(container, labels, active, action) {
   container.innerHTML = labels
     .map(
       (label) => `
-        <button class="${label === active ? "is-selected" : ""}" type="button" data-action="${action}" data-value="${label}">
-          ${label}
+        <button class="${label === active ? "is-selected" : ""}" type="button" data-action="${action}" data-value="${escapeHtml(label)}">
+          ${escapeHtml(label)}
         </button>
       `
     )
@@ -352,17 +429,17 @@ function renderOrders() {
     .map(
       (order) => `
         <article class="order-card ${order.primary ? "is-pay" : ""}">
-          <h3>${order.status}</h3>
+          <h3>${escapeHtml(order.status)}</h3>
           <div class="order-main">
-            <div class="order-thumb" style="background-position: ${order.thumbX} ${order.thumbY};" aria-hidden="true"></div>
+            <div class="order-thumb" style="background-position: ${escapeHtml(order.thumbX)} ${escapeHtml(order.thumbY)};" aria-hidden="true"></div>
             <div class="order-info">
-              <div class="order-name" title="${order.productName}"></div>
-              <span class="order-price">¥ ${order.price.toLocaleString("zh-CN")}</span>
+              <div class="order-name" title="${escapeHtml(order.productName)}">${escapeHtml(order.productName)}</div>
+              <span class="order-price">${money(order.price)}</span>
             </div>
           </div>
           <div class="order-card-footer">
-            <button class="${order.primary ? "primary" : ""}" type="button" data-action="order-action" data-order-id="${order.id}">
-              ${order.action}
+            <button class="${order.primary ? "primary" : ""}" type="button" data-action="order-action" data-order-id="${escapeHtml(order.id)}">
+              ${escapeHtml(order.action)}
             </button>
           </div>
         </article>
@@ -399,12 +476,14 @@ function openSheet(title, html) {
   nodes.sheetTitle.textContent = title;
   nodes.sheetContent.innerHTML = html;
   nodes.sheetContent.classList.toggle("has-detail-actions", html.includes("detail-actions"));
+  nodes.sheet.classList.toggle("is-mini-screen", html.includes("mini-screen"));
   nodes.sheet.classList.add("is-open");
   nodes.sheet.setAttribute("aria-hidden", "false");
 }
 
 function closeSheet() {
   nodes.sheet.classList.remove("is-open");
+  nodes.sheet.classList.remove("is-mini-screen");
   nodes.sheetContent.classList.remove("has-detail-actions");
   nodes.sheet.setAttribute("aria-hidden", "true");
 }
@@ -412,45 +491,48 @@ function closeSheet() {
 function openProduct(productId) {
   const product = findProduct(productId);
   if (!product) return;
+  const relatedCase = cases.find((item) => item.productIds.includes(product.id));
 
   openSheet(
-    product.name,
+    "产品详情",
     `
-      <div class="detail-image" style="background-position: ${product.thumbX} ${product.thumbY};"></div>
-      <div class="detail-heading">
-        <div>
-          <h3>${product.name}</h3>
-          <div class="tag-row">${product.tags.map((tag) => `<span>${tag}</span>`).join("")}</div>
+      <section class="mini-screen product-mini-screen">
+        <div class="mini-hero" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};">
+          <span>1/5</span>
         </div>
-        <span class="price">${money(product.price)}</span>
-      </div>
-      <p class="sheet-copy">${product.story}</p>
-      <section class="tone-preview">
-        <div>
-          <span>铃音试听</span>
-          <strong>${product.tone}</strong>
+        <div class="mini-title-row">
+          <div>
+            <h3>${escapeHtml(product.name)}</h3>
+            <p>${escapeHtml(product.story)}</p>
+          </div>
+          <strong>${money(product.price)}</strong>
         </div>
-        <button type="button" data-action="play-tone" data-product-id="${product.id}">
-          试听
-        </button>
+        <div class="mini-tags">${product.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+        <div class="mini-options" data-sheet-group="rope">
+          <button class="is-selected" type="button" data-value="墨绿绳">颜色</button>
+          <button type="button" data-value="尺寸">尺寸</button>
+          <button type="button" data-value="材质">材质</button>
+        </div>
+        <div class="mini-line"></div>
+        <div class="mini-line short"></div>
+        <section class="mini-info-grid">
+          <div><span>库存</span><strong>${escapeHtml(product.stock)}</strong></div>
+          <div><span>周期</span><strong>${escapeHtml(product.cycle)}</strong></div>
+          <div><span>铃音</span><strong>${escapeHtml(product.tone)}</strong></div>
+          <div><span>规格</span><strong>${escapeHtml(product.specs)}</strong></div>
+        </section>
+        <section class="mini-case-link">
+          <h4>用于这款的案例</h4>
+          <button type="button" data-action="${relatedCase ? "open-case" : "show-toast"}" ${relatedCase ? `data-case-id="${escapeHtml(relatedCase.id)}"` : 'data-toast="暂无关联案例"'}>
+            <span>${escapeHtml(relatedCase?.title || "到店选铃音")}</span>
+          </button>
+        </section>
+        <div class="sheet-actions detail-actions mini-actions">
+          <button class="mini-icon-action" type="button" data-action="show-toast" data-toast="已加入收藏">收藏</button>
+          <button class="secondary-action" type="button" data-action="show-toast" data-toast="已加入待确认清单">加入购物车</button>
+          <button class="primary-action" type="button" data-action="open-order" data-product-id="${escapeHtml(product.id)}">立即购买</button>
+        </div>
       </section>
-      <div class="detail-list">
-        <div><span>材质</span><strong>${product.material}</strong></div>
-        <div><span>尺寸重量</span><strong>${product.specs}</strong></div>
-        <div><span>铃音</span><strong>${product.tone}</strong></div>
-        <div><span>手作周期</span><strong>${product.cycle}</strong></div>
-        <div><span>库存状态</span><strong>${product.stock}</strong></div>
-        <div><span>保养方式</span><strong>${product.care}</strong></div>
-      </div>
-      <div class="option-grid" data-sheet-group="rope">
-        <button class="is-selected" type="button" data-value="墨绿绳">墨绿绳</button>
-        <button type="button" data-value="酒红绳">酒红绳</button>
-        <button type="button" data-value="青蓝绳">青蓝绳</button>
-      </div>
-      <div class="sheet-actions detail-actions">
-        <button class="secondary-action" type="button" data-action="open-consult" data-product-id="${product.id}">定制咨询</button>
-        <button class="primary-action" type="button" data-action="open-order" data-product-id="${product.id}">立即购买</button>
-      </div>
     `
   );
 }
@@ -461,17 +543,50 @@ function openCase(caseId) {
 
   const related = item.productIds.map(findProduct).filter(Boolean);
   openSheet(
-    item.title,
+    "案例详情",
     `
-      <div class="detail-image" style="background-position: ${item.thumbX} ${item.thumbY};"></div>
-      <div class="detail-list">
-        <div><span>使用场景</span><strong>${item.scene}</strong></div>
-        <div><span>搭配方案</span><strong>${item.summary}</strong></div>
-        <div><span>设计目的</span><strong>${item.result}</strong></div>
-      </div>
-      <div class="product-grid">
-        ${related.map((product) => renderProductCard(product, { compact: true })).join("")}
-      </div>
+      <section class="mini-screen case-mini-screen">
+        <div class="mini-hero case-hero" style="background-position: ${escapeHtml(item.thumbX)} ${escapeHtml(item.thumbY)};">
+          <div>
+            <span>森系 | 车挂定制</span>
+            <strong>${escapeHtml(item.title)}</strong>
+          </div>
+          <em>1/6</em>
+        </div>
+        <div class="mini-tags">
+          <span>${escapeHtml(item.type)}</span>
+          <span>门店</span>
+        </div>
+        <div class="mini-line"></div>
+        <section class="mini-story-card">
+          <div><span>使用场景</span><strong>${escapeHtml(item.scene)}</strong></div>
+          <div><span>搭配方案</span><strong>${escapeHtml(item.summary)}</strong></div>
+          <div><span>设计目的</span><strong>${escapeHtml(item.result)}</strong></div>
+        </section>
+        <section class="mini-related">
+          <h4>关联产品</h4>
+          <div>
+            ${related
+              .map(
+                (product) => `
+                  <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
+                    <span style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></span>
+                    <strong>${escapeHtml(product.name)}</strong>
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+        </section>
+        <div class="mini-store-row">
+          <span>承接门店</span>
+          <strong>${escapeHtml(storeInfo.address)}</strong>
+        </div>
+        <div class="sheet-actions detail-actions mini-actions">
+          <button class="mini-icon-action" type="button" data-action="copy-address">电话</button>
+          <button class="primary-action" type="button" data-action="submit-booking">预约咨询</button>
+        </div>
+      </section>
     `
   );
 }
@@ -482,9 +597,10 @@ function openConsult(productId = "") {
     "定制咨询",
     `
       <form class="sheet-form" id="consultForm">
+        <input name="productId" type="hidden" value="${product ? escapeHtml(product.id) : ""}" />
         <label>
           想咨询的内容
-          <textarea rows="4" name="message" placeholder="例如：想要核桃铃，墨绿绳，送新车朋友，预算 100 左右">${product ? `想咨询：${product.name}。` : ""}</textarea>
+          <textarea rows="4" name="message" placeholder="例如：想要核桃铃，墨绿绳，送新车朋友，预算 100 左右">${product ? `想咨询：${escapeHtml(product.name)}。` : ""}</textarea>
         </label>
         <label>
           联系方式
@@ -506,25 +622,52 @@ function openOrder(productId) {
   if (!product) return;
 
   openSheet(
-    "确认购买",
+    "结算确认",
     `
-      <div class="detail-heading">
-        <div>
-          <h3>${product.name}</h3>
-          <p class="sheet-copy">${product.stock} · ${product.cycle}</p>
+      <form class="mini-screen checkout-mini-screen sheet-form" id="orderForm">
+        <input name="productId" type="hidden" value="${escapeHtml(product.id)}" />
+        <section class="checkout-address">
+          <span>收货地址 · 姓名 电话</span>
+          <label>
+            <input name="customerName" type="text" placeholder="姓名" />
+          </label>
+          <label>
+            <input name="contact" type="text" placeholder="手机号或微信号" />
+          </label>
+          <label>
+            <textarea rows="2" name="address" placeholder="详细地址或到店自提时间"></textarea>
+          </label>
+        </section>
+        <section class="checkout-product">
+          <div class="checkout-thumb" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></div>
+          <div>
+            <h3>${escapeHtml(product.name)} · 规格</h3>
+            <p>×1</p>
+          </div>
+          <strong>${money(product.price)}</strong>
+        </section>
+        <div class="mini-options" data-sheet-group="delivery">
+          <button class="is-selected" type="button" data-value="快递">快递</button>
+          <button type="button" data-value="到店自提">到店自提</button>
+          <button type="button" data-value="礼盒包装">礼盒包装</button>
         </div>
-        <span class="price">${money(product.price)}</span>
-      </div>
-      <div class="option-grid" data-sheet-group="delivery">
-        <button class="is-selected" type="button" data-value="快递">快递</button>
-        <button type="button" data-value="到店自提">到店自提</button>
-        <button type="button" data-value="礼盒包装">礼盒包装</button>
-      </div>
-      <div class="detail-list">
-        <div><span>售后提示</span><strong>现货支持按平台规则售后；定制内容确认后，非质量问题需先沟通处理。</strong></div>
-        <div><span>小程序衔接</span><strong>真实项目中这里对接小程序登录、收货地址和支付能力。</strong></div>
-      </div>
-      <button class="wide-action" type="button" data-action="confirm-order" data-product-id="${product.id}">模拟提交订单</button>
+        <label class="checkout-note">
+          <textarea rows="2" name="note" placeholder="备注：绳色、铃音、祝福卡内容"></textarea>
+        </label>
+        <div class="checkout-total">
+          <div><span>优惠券</span><strong>></strong></div>
+          <div><span>积分抵扣</span><strong>-¥ 0</strong></div>
+          <div><span>运费</span><strong>¥ 0</strong></div>
+          <div><span>实付</span><strong>${money(product.price)}</strong></div>
+        </div>
+        <div class="sheet-actions detail-actions checkout-actions">
+          <div>
+            <span>实付</span>
+            <strong>${money(product.price)}</strong>
+          </div>
+          <button class="primary-action" type="submit">微信支付</button>
+        </div>
+      </form>
     `
   );
 }
@@ -541,23 +684,23 @@ function openLogistics(orderId) {
     "物流详情",
     `
       <div class="logistics-state">
-        <span>${order.carrier}</span>
-        <strong>${order.currentNode}</strong>
-        <p>物流单号：${order.logisticsNo || "待生成"}</p>
+        <span>${escapeHtml(order.carrier)}</span>
+        <strong>${escapeHtml(order.currentNode)}</strong>
+        <p>物流单号：${escapeHtml(order.logisticsNo || "待生成")}</p>
       </div>
       <article class="logistics-product">
-        <div class="order-thumb" style="background-position: ${order.thumbX} ${order.thumbY};" aria-hidden="true"></div>
+        <div class="order-thumb" style="background-position: ${escapeHtml(order.thumbX)} ${escapeHtml(order.thumbY)};" aria-hidden="true"></div>
         <div>
-          <h3>${order.productName}</h3>
-          <p>${order.spec}</p>
-          <strong>¥ ${order.price.toLocaleString("zh-CN")} × ${order.quantity}</strong>
+          <h3>${escapeHtml(order.productName)}</h3>
+          <p>${escapeHtml(order.spec)}</p>
+          <strong>${money(order.price)} × ${escapeHtml(order.quantity)}</strong>
         </div>
       </article>
       <div class="detail-list">
-        <div><span>订单编号</span><strong>${order.orderNo}</strong></div>
-        <div><span>购买时间</span><strong>${order.createdAt}</strong></div>
-        <div><span>支付时间</span><strong>${order.paidAt}</strong></div>
-        <div><span>收件信息</span><strong>${order.receiver}<br>${order.address}</strong></div>
+        <div><span>订单编号</span><strong>${escapeHtml(order.orderNo)}</strong></div>
+        <div><span>购买时间</span><strong>${escapeHtml(order.createdAt)}</strong></div>
+        <div><span>支付时间</span><strong>${escapeHtml(order.paidAt)}</strong></div>
+        <div><span>收件信息</span><strong>${escapeHtml(order.receiver)}<br>${escapeHtml(order.address)}</strong></div>
       </div>
       <section class="logistics-timeline">
         <h3>物流轨迹</h3>
@@ -566,7 +709,7 @@ function openLogistics(orderId) {
             (item, index) => `
               <div class="${index === 0 ? "is-current" : ""}">
                 <span></span>
-                <p>${item}</p>
+                <p>${escapeHtml(item)}</p>
               </div>
             `
           )
@@ -574,7 +717,7 @@ function openLogistics(orderId) {
       </section>
       <div class="sheet-actions">
         <button class="secondary-action" type="button" data-action="copy-logistics" data-order-id="${order.id}">复制单号</button>
-        <button class="primary-action" type="button" data-action="show-toast" data-toast="真实项目中这里可跳转快递轨迹页">查看完整轨迹</button>
+        <button class="primary-action" type="button" data-action="show-toast" data-toast="更多轨迹可联系门店或查看快递平台">查看完整轨迹</button>
       </div>
     `
   );
@@ -603,8 +746,8 @@ function openNavigation() {
         </div>
       </div>
       <div class="detail-list">
-        <div><span>门店</span><strong>${storeInfo.name}</strong></div>
-        <div><span>地址</span><strong>${storeInfo.address}</strong></div>
+        <div><span>门店</span><strong>${escapeHtml(storeInfo.name)}</strong></div>
+        <div><span>地址</span><strong>${escapeHtml(storeInfo.address)}</strong></div>
         <div><span>到店服务</span><strong>线下看实物、听铃音、选绳色，也可预约自提。</strong></div>
       </div>
       <div class="route-summary">
@@ -655,17 +798,17 @@ function openSearch() {
     results.innerHTML = [
       ...productHits.slice(0, 4).map(
         (product) => `
-          <button class="search-result" type="button" data-action="open-product" data-product-id="${product.id}">
+          <button class="search-result" type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
             <span>产品</span>
-            <strong>${product.name} · ${money(product.price)}</strong>
+            <strong>${escapeHtml(product.name)} · ${money(product.price)}</strong>
           </button>
         `
       ),
       ...caseHits.slice(0, 3).map(
         (item) => `
-          <button class="search-result" type="button" data-action="open-case" data-case-id="${item.id}">
+          <button class="search-result" type="button" data-action="open-case" data-case-id="${escapeHtml(item.id)}">
             <span>案例</span>
-            <strong>${item.title}</strong>
+            <strong>${escapeHtml(item.title)}</strong>
           </button>
         `
       ),
@@ -677,11 +820,184 @@ function openSearch() {
   input.focus();
 }
 
-function submitBooking() {
+function renderAgentProduct(product) {
+  return `
+    <button class="agent-product" type="button" data-action="agent-open-product" data-product-id="${escapeHtml(product.id)}">
+      <span class="agent-product-thumb" style="--thumb-x: ${escapeHtml(product.thumbX || "50%")}; --thumb-y: ${escapeHtml(product.thumbY || "58%")};"></span>
+      <span>
+        <strong>${escapeHtml(product.name)} · ${money(product.price)}</strong>
+        <span>${escapeHtml(product.stock || product.type || "可咨询")}</span>
+      </span>
+    </button>
+  `;
+}
+
+function renderAgentMessages() {
+  if (!nodes.agentMessages || !nodes.agentQuick) return;
+
+  const messagesHtml = state.agentMessages
+    .map((message) => {
+      const productsHtml = message.products?.length
+        ? `<div class="agent-products">${message.products.map(renderAgentProduct).join("")}</div>`
+        : "";
+      return `
+        <div class="agent-message ${message.role}">
+          ${escapeHtml(message.content)}
+          ${productsHtml}
+        </div>
+      `;
+    })
+    .join("");
+
+  const loadingHtml = state.agentLoading
+    ? `
+      <div class="agent-message assistant is-thinking" aria-live="polite">
+        <span>正在思考</span>
+        <span class="thinking-dots" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </span>
+      </div>
+    `
+    : "";
+
+  nodes.agentMessages.innerHTML = `${messagesHtml}${loadingHtml}`;
+
+  const last = state.agentMessages[state.agentMessages.length - 1];
+  nodes.agentQuick.innerHTML = state.agentLoading
+    ? ""
+    : (last?.quickReplies || [])
+    .map((reply) => `<button type="button" data-action="agent-quick" data-message="${escapeHtml(reply)}">${escapeHtml(reply)}</button>`)
+    .join("");
+
+  if (nodes.agentInput) {
+    nodes.agentInput.disabled = state.agentLoading;
+    nodes.agentInput.placeholder = state.agentLoading ? "小助手正在思考..." : "问问送礼、车挂、到店预约...";
+  }
+  const submitButton = nodes.agentForm?.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = state.agentLoading;
+    submitButton.textContent = state.agentLoading ? "等待" : "发送";
+  }
+
+  nodes.agentMessages.scrollTop = nodes.agentMessages.scrollHeight;
+}
+
+function openAgent() {
+  nodes.agentPanel?.classList.add("is-open");
+  nodes.agentPanel?.setAttribute("aria-hidden", "false");
+  renderAgentMessages();
+  window.setTimeout(() => nodes.agentInput?.focus(), 80);
+}
+
+function closeAgent() {
+  nodes.agentPanel?.classList.remove("is-open");
+  nodes.agentPanel?.setAttribute("aria-hidden", "true");
+}
+
+async function sendAgentMessage(message) {
+  const content = textValue(message);
+  if (!content || state.agentLoading) return;
+
+  state.agentMessages.push({ role: "user", content, products: [], quickReplies: [] });
+  state.agentLoading = true;
+  renderAgentMessages();
+
+  try {
+    const response = await apiRequest("/agent/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        message: content,
+        history: state.agentMessages.slice(-8).map((item) => ({ role: item.role, content: item.content })),
+      }),
+    });
+    state.agentMessages.push({
+      role: "assistant",
+      content: response.reply || "我先记录下来了，可以再描述一下你的用途或预算。",
+      products: response.products || [],
+      quickReplies: response.quickReplies || ["推荐送礼款", "看现货", "到店预约"],
+      action: response.action,
+    });
+  } catch (error) {
+    state.agentMessages.push({
+      role: "assistant",
+      content: state.apiOnline ? error.message : "后端未启动，我暂时不能回答。请先运行 npm start。",
+      products: [],
+      quickReplies: ["推荐送礼款", "看现货", "到店预约"],
+    });
+  } finally {
+    state.agentLoading = false;
+    renderAgentMessages();
+  }
+}
+
+function textValue(value) {
+  return String(value ?? "").trim();
+}
+
+async function submitBooking() {
   const type = document.querySelector('[data-booking-group="type"] .is-selected')?.dataset.value || "定制咨询";
   const time = document.querySelector('[data-booking-group="time"] .is-selected')?.dataset.value || "今天 15:00";
   const note = document.getElementById("bookingNote")?.value.trim();
-  showToast(`已模拟提交：${type}，${time}${note ? `，备注：${note}` : ""}`);
+
+  try {
+    await apiRequest("/bookings", {
+      method: "POST",
+      body: JSON.stringify({ type, time, note }),
+    });
+    showToast(`预约已提交：${type}，${time}`);
+    const noteInput = document.getElementById("bookingNote");
+    if (noteInput) noteInput.value = "";
+  } catch (error) {
+    showToast(state.apiOnline ? error.message : "后端未启动，预约暂未提交");
+  }
+}
+
+async function submitConsultForm(form) {
+  const formData = new FormData(form);
+  const topic = document.querySelector('[data-sheet-group="consult"] .is-selected')?.dataset.value || "定制咨询";
+  const payload = {
+    productId: formData.get("productId") || "",
+    message: formData.get("message") || "",
+    contact: formData.get("contact") || "",
+    topic,
+  };
+
+  try {
+    await apiRequest("/consultations", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    closeSheet();
+    showToast("咨询已提交，后台可查看");
+  } catch (error) {
+    showToast(state.apiOnline ? error.message : "后端未启动，咨询暂未提交");
+  }
+}
+
+async function submitOrderForm(form) {
+  const formData = new FormData(form);
+  const delivery = document.querySelector('[data-sheet-group="delivery"] .is-selected')?.dataset.value || "快递";
+  const payload = {
+    productId: formData.get("productId") || "",
+    delivery,
+    customerName: formData.get("customerName") || "",
+    contact: formData.get("contact") || "",
+    address: formData.get("address") || "",
+    note: formData.get("note") || "",
+  };
+
+  try {
+    const order = await apiRequest("/orders", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    orders = [order, ...orders.filter((item) => item.id !== order.id)];
+    closeSheet();
+    showToast("订单已提交，等待门店确认");
+    setScreen("orders");
+  } catch (error) {
+    showToast(state.apiOnline ? error.message : "后端未启动，订单暂未提交");
+  }
 }
 
 async function copyAddress() {
@@ -721,7 +1037,7 @@ function openMap() {
         longitude: storeInfo.longitude,
       },
     });
-    showToast("已发送门店导航给小程序");
+    showToast("已发送门店导航");
     return;
   }
   window.open(url, "_blank", "noopener");
@@ -765,6 +1081,23 @@ function bindEvents() {
       if (action === "open-case") openCase(caseId);
       if (action === "open-consult") openConsult(productId);
       if (action === "open-order") openOrder(productId);
+      if (action === "open-agent") openAgent();
+      if (action === "close-agent") closeAgent();
+      if (action === "agent-open-product") {
+        closeAgent();
+        openProduct(productId);
+      }
+      if (action === "agent-quick") {
+        if (button.dataset.message === "到店预约") {
+          closeAgent();
+          setScreen("store");
+        } else if (button.dataset.message?.includes("咨询")) {
+          closeAgent();
+          openConsult();
+        } else {
+          sendAgentMessage(button.dataset.message);
+        }
+      }
       if (action === "open-navigation") openNavigation();
       if (action === "open-search") openSearch();
       if (action === "close-sheet") closeSheet();
@@ -782,14 +1115,14 @@ function bindEvents() {
       }
       if (action === "order-action") {
         if (button.textContent.trim() === "去付款") {
-          showToast("真实项目中这里接入小程序支付");
+          showToast("请联系门店确认付款方式");
         } else {
           openLogistics(button.dataset.orderId);
         }
       }
       if (action === "confirm-order") {
-        closeSheet();
-        showToast("订单已模拟提交。真实项目中此处接入小程序支付。");
+        const form = document.getElementById("orderForm");
+        if (form) submitOrderForm(form);
       }
       if (action === "submit-booking") submitBooking();
       if (action === "show-toast") showToast(toast || "已点击");
@@ -819,13 +1152,23 @@ function bindEvents() {
   document.addEventListener("submit", (event) => {
     if (event.target.id === "consultForm") {
       event.preventDefault();
-      closeSheet();
-      showToast("咨询已模拟提交。真实项目中可转入企微、客服或表单系统。");
+      submitConsultForm(event.target);
+    }
+    if (event.target.id === "orderForm") {
+      event.preventDefault();
+      submitOrderForm(event.target);
+    }
+    if (event.target.id === "agentForm") {
+      event.preventDefault();
+      const value = nodes.agentInput.value;
+      nodes.agentInput.value = "";
+      sendAgentMessage(value);
     }
   });
 }
 
-function init() {
+async function init() {
+  await loadRemoteData();
   renderHome();
   renderProducts();
   renderCases();

@@ -1,0 +1,13 @@
+{
+  "name": "xiaodian",
+  "version": "1.0.0",
+  "private": true,
+  "description": "果壳铃手作铺第一版线上店铺原型",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

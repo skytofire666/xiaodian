@@ -1,1 +1,6 @@
 verification-*.png
+.env*
+!.env.example
+data/store.json
+data/store.json.tmp
+test-results/

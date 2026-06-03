@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>果壳铃手作铺移动端原型</title>
+    <title>果壳铃手作铺</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -16,7 +16,7 @@
           </svg>
         </button>
         <div class="brand-block">
-          <p>小程序 WebView 原型</p>
+          <p>线下手作店</p>
           <h1>果壳铃手作铺</h1>
         </div>
         <button class="icon-button warm" type="button" data-action="open-consult" aria-label="定制咨询">
@@ -29,12 +29,12 @@
       <main class="screen" id="screen">
         <section class="view is-active" data-view="home" aria-label="首页">
           <div class="hero">
-            <img src="./assets/hero-forest-bells.png" alt="森系果壳铃手作产品" />
+            <img src="./assets/forest-bell-dark.png" alt="森系果壳铃手作产品" />
             <div class="hero-shade"></div>
             <div class="hero-copy">
               <p class="hero-eyebrow">森林铃音</p>
               <h2>把森林的声音带在身边</h2>
-              <p>现货果壳铃 · 轻定制 · 到店听铃</p>
+              <p>黄铜铃音 · 森系车挂 · 到店听铃</p>
             </div>
           </div>
 
@@ -76,23 +76,35 @@
           </section>
 
           <section class="process-band" aria-label="购买流程">
-            <h3>更适合手作店的下单路径</h3>
+            <div class="guide-media">
+              <img src="./assets/forest-bell-dark.png" alt="果壳铃手作产品与门店体验" />
+              <div>
+                <span>线下手作体验</span>
+                <strong>先看实物，再确认声音与细节</strong>
+              </div>
+            </div>
             <div class="process-list">
-              <div>
+              <article>
                 <span>01</span>
-                <strong>看氛围</strong>
-                <p>首页先给风格、声音和礼物场景。</p>
-              </div>
-              <div>
+                <div>
+                  <strong>看款式氛围</strong>
+                  <p>先看颜色、声音和礼物场景，确认喜欢的整体感觉。</p>
+                </div>
+              </article>
+              <article>
                 <span>02</span>
-                <strong>选成品</strong>
-                <p>现货支持直接购买，不强依赖购物车。</p>
-              </div>
-              <div>
+                <div>
+                  <strong>选现货成品</strong>
+                  <p>现货可直接提交订单，门店确认后安排自提或寄送。</p>
+                </div>
+              </article>
+              <article>
                 <span>03</span>
-                <strong>问定制</strong>
-                <p>需要改绳色、配件、包装时进入咨询。</p>
-              </div>
+                <div>
+                  <strong>沟通轻定制</strong>
+                  <p>需要改绳色、配件、包装时，先提交咨询再确认方案。</p>
+                </div>
+              </article>
             </div>
           </section>
         </section>
@@ -118,8 +130,8 @@
 
           <div class="utility-panel">
             <div>
-              <strong>商品详情重点</strong>
-              <span>材质、尺寸重量、手作周期、现货状态、保养方式、定制规则都放进详情。</span>
+              <strong>选购提示</strong>
+              <span>下单前可查看材质、尺寸重量、手作周期、现货状态和保养方式。</span>
             </div>
           </div>
 
@@ -154,7 +166,7 @@
           </div>
 
           <div class="store-hero">
-            <img src="./assets/hero-forest-bells.png" alt="门店手作桌面" />
+            <img src="./assets/forest-bell-dark.png" alt="门店手作桌面" />
             <div>
               <p class="pill">杭州工作室</p>
               <h3>到店看实物、听铃音、选绳色</h3>
@@ -340,6 +352,7 @@
 
           <nav class="order-tabs" aria-label="订单状态">
             <button class="is-selected" type="button" data-action="set-order-tab" data-value="全部">全部</button>
+            <button type="button" data-action="set-order-tab" data-value="待确认">待确认</button>
             <button type="button" data-action="set-order-tab" data-value="待付款">待付款</button>
             <button type="button" data-action="set-order-tab" data-value="待发货">待发货</button>
             <button type="button" data-action="set-order-tab" data-value="待收货">待收货</button>
@@ -405,6 +418,31 @@
         <div class="sheet-content" id="sheetContent"></div>
       </section>
     </div>
+
+    <section class="agent-panel" id="agentPanel" aria-hidden="true" aria-label="AI 导购">
+      <div class="agent-head">
+        <div>
+          <span>AI 导购</span>
+          <strong>果壳铃小助手</strong>
+        </div>
+        <button class="icon-button" type="button" data-action="close-agent" aria-label="关闭 AI 导购">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="agent-messages" id="agentMessages"></div>
+      <div class="agent-quick" id="agentQuick"></div>
+      <form class="agent-input" id="agentForm">
+        <input id="agentInput" name="message" type="text" placeholder="问问送礼、车挂、到店预约..." autocomplete="off" />
+        <button type="submit">发送</button>
+      </form>
+    </section>
+
+    <button class="agent-fab" type="button" data-action="open-agent" aria-label="打开 AI 导购">
+      <span>AI</span>
+    </button>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="./app.js"></script>
