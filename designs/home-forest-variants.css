@@ -1,0 +1,640 @@
+:root {
+  --ink: #13211b;
+  --moss: #244f40;
+  --fern: #78966e;
+  --mint: #dce9df;
+  --paper: #f5f1e7;
+  --ivory: #fffdf8;
+  --brass: #b78348;
+  --berry: #8d555c;
+  --teal: #2c7280;
+  --line: rgba(36, 79, 64, 0.16);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #e8eee8;
+}
+
+button {
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 390px);
+  gap: 28px;
+  padding: 28px;
+}
+
+.phone {
+  width: 390px;
+  height: 844px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  box-shadow: 0 22px 60px rgba(19, 33, 27, 0.2);
+}
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.section-title span {
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 253, 248, 0.92);
+  border-top: 1px solid rgba(36, 79, 64, 0.12);
+  backdrop-filter: blur(18px);
+  font-size: 12px;
+  font-weight: 800;
+  color: #627269;
+}
+
+.tabbar span {
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+}
+
+.tabbar .active {
+  background: var(--mint);
+  color: var(--moss);
+}
+
+.variant-a {
+  background: var(--paper);
+}
+
+.variant-a .nav {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 16px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  font-weight: 900;
+}
+
+.variant-a .nav button,
+.variant-b button,
+.variant-c button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.variant-a .nav button {
+  background: rgba(255, 253, 248, 0.88);
+  color: var(--moss);
+}
+
+.a-hero {
+  height: 480px;
+  position: relative;
+  overflow: hidden;
+}
+
+.a-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+.a-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(14, 24, 19, 0.08), rgba(14, 24, 19, 0.7));
+}
+
+.a-copy {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 76px;
+  z-index: 2;
+  color: #fffdf8;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #d8eadf;
+  font-weight: 900;
+}
+
+.a-copy h1 {
+  max-width: 7em;
+  margin: 0 0 12px;
+  font-size: 38px;
+  line-height: 1.02;
+}
+
+.a-copy span {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.a-panel {
+  position: relative;
+  z-index: 4;
+  margin: -52px 18px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 20px;
+  box-shadow: 0 18px 42px rgba(19, 33, 27, 0.18);
+}
+
+.a-panel div {
+  min-height: 66px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 0 6px;
+}
+
+.a-panel strong {
+  font-size: 13px;
+}
+
+.a-panel span {
+  font-size: 11px;
+  color: #6d776f;
+}
+
+.a-products {
+  padding: 20px 18px 0;
+}
+
+.product-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.product-row article {
+  min-height: 170px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--ivory);
+  border: 1px solid var(--line);
+}
+
+.product-row img {
+  width: 100%;
+  height: 92px;
+  display: block;
+  object-fit: cover;
+}
+
+.product-row div {
+  padding: 10px;
+}
+
+.product-row h3,
+.product-row p {
+  margin: 0;
+}
+
+.product-row h3 {
+  font-size: 14px;
+}
+
+.product-row p {
+  margin: 5px 0;
+  color: #68756d;
+  font-size: 11px;
+}
+
+.product-row strong {
+  color: var(--berry);
+  font-size: 14px;
+}
+
+.variant-b {
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(241, 246, 239, 0.9)),
+    #edf4ef;
+}
+
+.b-head {
+  height: 56px;
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+}
+
+.b-head button {
+  min-width: 42px;
+  padding: 0;
+  background: #fff;
+  color: var(--moss);
+  border: 1px solid var(--line);
+}
+
+.b-head p,
+.b-head h1 {
+  margin: 0;
+  text-align: center;
+}
+
+.b-head p {
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.b-head h1 {
+  font-size: 18px;
+}
+
+.b-hero {
+  height: 392px;
+  position: relative;
+  margin-top: 10px;
+}
+
+.b-ring {
+  position: absolute;
+  left: 17px;
+  top: 20px;
+  width: 318px;
+  height: 318px;
+  border-radius: 50%;
+  border: 1px solid rgba(36, 79, 64, 0.18);
+}
+
+.b-hero img {
+  position: absolute;
+  left: 42px;
+  top: 26px;
+  width: 286px;
+  height: 286px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 58%;
+  box-shadow: 0 24px 52px rgba(36, 79, 64, 0.26);
+}
+
+.b-float {
+  position: absolute;
+  right: 18px;
+  top: 42px;
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 50%;
+  background: var(--moss);
+  color: #fff;
+  box-shadow: 0 16px 34px rgba(36, 79, 64, 0.28);
+}
+
+.b-float span,
+.b-float small {
+  font-size: 11px;
+  color: #cfe0d3;
+}
+
+.b-float strong {
+  font-size: 25px;
+  line-height: 1;
+}
+
+.b-copy {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 0;
+  text-align: center;
+}
+
+.b-copy h2 {
+  margin: 0 auto 8px;
+  max-width: 12em;
+  font-size: 28px;
+  line-height: 1.08;
+}
+
+.b-copy p {
+  margin: 0;
+  color: #65736b;
+  font-size: 13px;
+}
+
+.b-scenes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.b-scenes article {
+  min-height: 92px;
+  border-radius: 18px;
+  padding: 14px;
+  background: #fffdf8;
+  border: 1px solid var(--line);
+}
+
+.b-scenes span {
+  color: var(--brass);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.b-scenes strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 15px;
+}
+
+.b-scenes p {
+  margin: 0;
+  color: #68756d;
+  font-size: 11px;
+}
+
+.b-pick {
+  margin-top: 18px;
+}
+
+.b-pick article {
+  min-height: 88px;
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 68px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border-radius: 18px;
+  background: var(--moss);
+  color: #fff;
+  padding: 10px;
+}
+
+.thumb {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  background: url("../assets/hero-forest-bells.png") center / cover;
+}
+
+.b-pick h3,
+.b-pick p {
+  margin: 0;
+}
+
+.b-pick h3 {
+  font-size: 15px;
+}
+
+.b-pick p {
+  margin-top: 5px;
+  color: #d5e4d9;
+  font-size: 11px;
+}
+
+.b-pick strong {
+  color: #f1d29d;
+}
+
+.b-tab {
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  border-radius: 22px;
+}
+
+.variant-c {
+  background:
+    linear-gradient(90deg, rgba(36, 79, 64, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(36, 79, 64, 0.04) 1px, transparent 1px),
+    #f7f3e9;
+  background-size: 28px 28px;
+  padding: 18px;
+}
+
+.c-head {
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.c-head p,
+.c-head h1 {
+  margin: 0;
+}
+
+.c-head p {
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.c-head h1 {
+  font-size: 20px;
+}
+
+.c-head button {
+  background: var(--moss);
+  color: #fff;
+}
+
+.c-hero {
+  height: 378px;
+  position: relative;
+  margin-top: 8px;
+}
+
+.c-card {
+  position: absolute;
+  overflow: hidden;
+  border: 8px solid #fffdf8;
+  box-shadow: 0 18px 38px rgba(19, 33, 27, 0.16);
+  background: var(--mint);
+}
+
+.c-card.main {
+  left: 18px;
+  top: 18px;
+  width: 250px;
+  height: 250px;
+  border-radius: 28px;
+  rotate: -4deg;
+}
+
+.c-card.main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.c-card.small {
+  width: 118px;
+  height: 118px;
+  border-radius: 24px;
+  background-image: url("../assets/hero-forest-bells.png");
+  background-size: cover;
+}
+
+.c-card.small.top {
+  right: 6px;
+  top: 40px;
+  rotate: 8deg;
+  background-position: 28% 80%;
+}
+
+.c-card.small.bottom {
+  right: 28px;
+  top: 174px;
+  rotate: -7deg;
+  background-position: 76% 72%;
+}
+
+.label {
+  position: absolute;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: var(--moss);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: 0 12px 26px rgba(36, 79, 64, 0.2);
+}
+
+.label.one {
+  left: 8px;
+  top: 244px;
+}
+
+.label.two {
+  right: 22px;
+  top: 12px;
+  background: var(--berry);
+}
+
+.c-hero h2 {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  font-size: 31px;
+  line-height: 1.08;
+}
+
+.c-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+
+.c-actions button {
+  min-height: 46px;
+  border-radius: 16px;
+  border: 0;
+  font-weight: 900;
+}
+
+.c-actions button:first-child {
+  background: var(--moss);
+  color: #fff;
+}
+
+.c-actions button:last-child {
+  background: #fffdf8;
+  color: var(--moss);
+  border: 1px solid var(--line);
+}
+
+.c-list {
+  border-radius: 22px;
+  background: rgba(255, 253, 248, 0.82);
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+
+.c-list article {
+  min-height: 62px;
+  display: grid;
+  align-content: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.c-list article:last-child {
+  border-bottom: 0;
+}
+
+.c-list strong {
+  font-size: 15px;
+}
+
+.c-list p {
+  margin: 5px 0 0;
+  color: #68756d;
+  font-size: 12px;
+}
+
+.c-tab {
+  background: rgba(36, 79, 64, 0.92);
+  color: #d7e5da;
+}
+
+.c-tab .active {
+  background: #fffdf8;
+}

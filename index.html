@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>果壳铃手作铺移动端原型</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" data-screen="home">
+      <header class="topbar">
+        <button class="icon-button" type="button" data-action="open-search" aria-label="搜索">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m16 16 5 5"></path>
+          </svg>
+        </button>
+        <div class="brand-block">
+          <p>小程序 WebView 原型</p>
+          <h1>果壳铃手作铺</h1>
+        </div>
+        <button class="icon-button warm" type="button" data-action="open-consult" aria-label="定制咨询">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+          </svg>
+        </button>
+      </header>
+
+      <main class="screen" id="screen">
+        <section class="view is-active" data-view="home" aria-label="首页">
+          <div class="hero">
+            <img src="./assets/hero-forest-bells.png" alt="森系果壳铃手作产品" />
+            <div class="hero-shade"></div>
+            <div class="hero-copy">
+              <p class="hero-eyebrow">森林铃音</p>
+              <h2>把森林的声音带在身边</h2>
+              <p>现货果壳铃 · 轻定制 · 到店听铃</p>
+            </div>
+          </div>
+
+          <div class="quick-grid" aria-label="快捷入口">
+            <button type="button" data-nav-target="products">
+              <strong>今日可发</strong>
+              <span>12 款现货</span>
+            </button>
+            <button type="button" data-action="show-toast" data-toast="可在商品详情中试听不同铃音">
+              <strong>铃音试听</strong>
+              <span>清亮 / 柔和</span>
+            </button>
+            <button type="button" data-nav-target="products" data-preset-filter="礼盒">
+              <strong>礼盒包装</strong>
+              <span>可写祝福卡</span>
+            </button>
+          </div>
+
+          <section class="content-section">
+            <div class="section-head">
+              <div>
+                <p class="kicker">热门推荐</p>
+                <h3>适合第一次购买</h3>
+              </div>
+              <button class="text-link" type="button" data-nav-target="products">全部产品</button>
+            </div>
+            <div class="horizontal-list" id="homeProducts"></div>
+          </section>
+
+          <section class="content-section">
+            <div class="section-head">
+              <div>
+                <p class="kicker">搭配案例</p>
+                <h3>真实搭配案例</h3>
+              </div>
+              <button class="text-link" type="button" data-nav-target="cases">看案例</button>
+            </div>
+            <div class="case-strip" id="homeCases"></div>
+          </section>
+
+          <section class="process-band" aria-label="购买流程">
+            <h3>更适合手作店的下单路径</h3>
+            <div class="process-list">
+              <div>
+                <span>01</span>
+                <strong>看氛围</strong>
+                <p>首页先给风格、声音和礼物场景。</p>
+              </div>
+              <div>
+                <span>02</span>
+                <strong>选成品</strong>
+                <p>现货支持直接购买，不强依赖购物车。</p>
+              </div>
+              <div>
+                <span>03</span>
+                <strong>问定制</strong>
+                <p>需要改绳色、配件、包装时进入咨询。</p>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" data-view="products" aria-label="产品">
+          <div class="page-title">
+            <div>
+              <p class="kicker">产品现货</p>
+              <h2>产品与现货</h2>
+            </div>
+            <button class="small-action" type="button" data-action="open-consult">定制</button>
+          </div>
+
+          <label class="search-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m16 16 5 5"></path>
+            </svg>
+            <input id="productSearch" type="search" placeholder="搜产品、风格、音色" autocomplete="off" />
+          </label>
+
+          <div class="chip-row" id="productFilters" aria-label="产品分类"></div>
+
+          <div class="utility-panel">
+            <div>
+              <strong>商品详情重点</strong>
+              <span>材质、尺寸重量、手作周期、现货状态、保养方式、定制规则都放进详情。</span>
+            </div>
+          </div>
+
+          <div class="product-grid" id="productGrid"></div>
+          <p class="empty-state" id="productEmpty" hidden>没有匹配到产品，试试“森系”“礼盒”或“车挂”。</p>
+        </section>
+
+        <section class="view" data-view="cases" aria-label="案例">
+          <div class="page-title">
+            <div>
+              <p class="kicker">搭配案例</p>
+              <h2>案例种草</h2>
+            </div>
+            <button class="small-action ghost" type="button" data-action="open-search">搜索</button>
+          </div>
+
+          <div class="chip-row" id="caseFilters" aria-label="案例分类"></div>
+          <div class="case-grid" id="caseGrid"></div>
+        </section>
+
+        <section class="view" data-view="store" aria-label="门店">
+          <div class="page-title">
+            <div>
+              <p class="kicker">线下门店</p>
+              <h2>门店与预约</h2>
+              <span class="open-status">营业中 · 今日 19:30 打烊</span>
+            </div>
+            <div class="title-actions">
+              <button class="small-action ghost" type="button" data-action="open-navigation">导航</button>
+              <button class="small-action" type="button" data-action="submit-booking">预约</button>
+            </div>
+          </div>
+
+          <div class="store-hero">
+            <img src="./assets/hero-forest-bells.png" alt="门店手作桌面" />
+            <div>
+              <p class="pill">杭州工作室</p>
+              <h3>到店看实物、听铃音、选绳色</h3>
+            </div>
+          </div>
+
+          <section class="info-list">
+            <div>
+              <span>地址</span>
+              <strong>杭州市西湖区灵隐路 88 号手作工作室</strong>
+            </div>
+            <div>
+              <span>营业</span>
+              <strong>周二至周日 11:00 - 19:30</strong>
+            </div>
+            <div>
+              <span>服务</span>
+              <strong>到店自提、礼盒包装、轻定制沟通</strong>
+            </div>
+            <div>
+              <span>规则</span>
+              <strong>定制品下单前确认方案，非质量问题不直接退换</strong>
+            </div>
+          </section>
+
+          <section class="navigation-card">
+            <div>
+              <p class="kicker">到店导航</p>
+              <h3>导航到线下门店</h3>
+              <span>支持步行、驾车和公交路线入口</span>
+            </div>
+            <button class="map-action" type="button" data-action="open-navigation" aria-label="导航到门店">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m3 11 19-8-8 19-3-9z"></path>
+              </svg>
+            </button>
+          </section>
+
+          <section class="booking-panel">
+            <div class="section-head">
+              <div>
+                <p class="kicker">预约服务</p>
+                <h3>预约类型</h3>
+              </div>
+            </div>
+            <div class="option-grid" data-booking-group="type">
+              <button class="is-selected" type="button" data-value="定制咨询">定制咨询</button>
+              <button type="button" data-value="到店自提">到店自提</button>
+              <button type="button" data-value="体验选品">体验选品</button>
+            </div>
+            <div class="section-head compact">
+              <div>
+                <p class="kicker">到店时段</p>
+                <h3>到店时段</h3>
+              </div>
+            </div>
+            <div class="option-grid" data-booking-group="time">
+              <button class="is-selected" type="button" data-value="今天 15:00">今天 15:00</button>
+              <button type="button" data-value="明天 13:30">明天 13:30</button>
+              <button type="button" data-value="周末 16:00">周末 16:00</button>
+            </div>
+            <label class="note-field">
+              <span>备注</span>
+              <textarea id="bookingNote" rows="3" placeholder="例如：想看车挂，偏绿色绳，送朋友"></textarea>
+            </label>
+            <button class="wide-action" type="button" data-action="submit-booking">提交预约</button>
+          </section>
+        </section>
+
+        <section class="view" data-view="me" aria-label="我的">
+          <div class="profile-block">
+            <div class="avatar" aria-hidden="true">森</div>
+            <div>
+              <p class="kicker">会员中心</p>
+              <h2>手作收藏家</h2>
+              <span>积分 268 · 收藏 5 件 · 待收货 1 单</span>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <button type="button" data-nav-target="orders">
+              <strong>订单</strong>
+              <span>4 类状态</span>
+            </button>
+            <button type="button" data-nav-target="points">
+              <strong>积分</strong>
+              <span>可换配件</span>
+            </button>
+            <button type="button" data-action="open-consult">
+              <strong>售后</strong>
+              <span>先沟通</span>
+            </button>
+          </div>
+
+          <section class="content-section">
+            <div class="section-head">
+              <div>
+                <p class="kicker">常用服务</p>
+                <h3>我的服务</h3>
+              </div>
+            </div>
+            <div class="service-list">
+              <button type="button" data-action="open-consult">
+                <span>定制记录</span>
+                <strong>查看沟通方案</strong>
+              </button>
+              <button type="button" data-action="show-toast" data-toast="已展示物流节点：打包、揽收、运输、签收">
+                <span>物流跟踪</span>
+                <strong>查看包裹进度</strong>
+              </button>
+              <button type="button" data-action="show-toast" data-toast="售后规则已提示：现货与定制品分开处理">
+                <span>退款售后</span>
+                <strong>区分现货/定制</strong>
+              </button>
+              <button type="button" data-nav-target="cases">
+                <span>我的灵感</span>
+                <strong>从案例继续选</strong>
+              </button>
+            </div>
+          </section>
+
+          <section class="care-card">
+            <h3>手作保养提醒</h3>
+            <p>果壳与黄铜配件建议保持干燥，偶尔用软布擦拭。赠礼前可选择独立礼盒和祝福卡。</p>
+          </section>
+        </section>
+
+        <section class="view points-view" data-view="points" aria-label="积分中心">
+          <header class="subpage-head">
+            <button class="subpage-back" type="button" data-nav-target="me" aria-label="返回我的">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"></path>
+              </svg>
+            </button>
+            <h2>积分中心</h2>
+          </header>
+
+          <section class="points-card" aria-label="我的积分">
+            <div>
+              <span>我的积分</span>
+              <strong>1,280</strong>
+            </div>
+            <button type="button" data-action="points-checkin">签到</button>
+          </section>
+
+          <section class="points-section">
+            <h3>获取方式</h3>
+            <div class="points-actions">
+              <button type="button" data-action="show-toast" data-toast="消费后积分会在订单完成后入账">消费</button>
+              <button type="button" data-action="points-checkin">签到</button>
+              <button type="button" data-action="show-toast" data-toast="分享案例或产品给好友可获得积分">分享</button>
+            </div>
+          </section>
+
+          <section class="points-section">
+            <h3>积分明细</h3>
+            <div class="points-list">
+              <div>
+                <span>消费获得</span>
+                <strong>+128</strong>
+              </div>
+              <div>
+                <span>每日签到</span>
+                <strong>+5</strong>
+              </div>
+            </div>
+          </section>
+
+          <button class="points-store-button" type="button" data-action="show-toast" data-toast="积分商城为二期功能">
+            去积分商城 <span>二期</span>
+          </button>
+        </section>
+
+        <section class="view orders-view" data-view="orders" aria-label="我的订单">
+          <header class="subpage-head">
+            <button class="subpage-back" type="button" data-nav-target="me" aria-label="返回我的">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"></path>
+              </svg>
+            </button>
+            <h2>我的订单</h2>
+          </header>
+
+          <nav class="order-tabs" aria-label="订单状态">
+            <button class="is-selected" type="button" data-action="set-order-tab" data-value="全部">全部</button>
+            <button type="button" data-action="set-order-tab" data-value="待付款">待付款</button>
+            <button type="button" data-action="set-order-tab" data-value="待发货">待发货</button>
+            <button type="button" data-action="set-order-tab" data-value="待收货">待收货</button>
+            <button type="button" data-action="set-order-tab" data-value="评价">评价</button>
+          </nav>
+
+          <div class="order-list" id="orderList"></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="底部导航">
+        <button class="is-active" type="button" data-nav-target="home" aria-label="首页">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 11 12 3l9 8"></path>
+            <path d="M5 10v10h14V10"></path>
+          </svg>
+          <span>首页</span>
+        </button>
+        <button type="button" data-nav-target="products" aria-label="产品">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 4h10l2 5-7 12L5 9z"></path>
+            <path d="M5 9h14"></path>
+          </svg>
+          <span>产品</span>
+        </button>
+        <button type="button" data-nav-target="cases" aria-label="案例">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5h16v14H4z"></path>
+            <path d="m4 15 4-4 4 4 3-3 5 5"></path>
+          </svg>
+          <span>案例</span>
+        </button>
+        <button type="button" data-nav-target="store" aria-label="门店">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21s7-5.2 7-12a7 7 0 0 0-14 0c0 6.8 7 12 7 12z"></path>
+            <circle cx="12" cy="9" r="2"></circle>
+          </svg>
+          <span>门店</span>
+        </button>
+        <button type="button" data-nav-target="me" aria-label="我的">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21a8 8 0 0 1 16 0"></path>
+          </svg>
+          <span>我的</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="sheet" id="sheet" aria-hidden="true">
+      <div class="sheet-backdrop" data-action="close-sheet"></div>
+      <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 id="sheetTitle">详情</h2>
+          <button class="icon-button" type="button" data-action="close-sheet" aria-label="关闭">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12"></path>
+              <path d="M18 6 6 18"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="sheet-content" id="sheetContent"></div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
