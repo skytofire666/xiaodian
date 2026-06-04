@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b100e" />
+    <meta name="format-detection" content="telephone=no" />
     <title>果壳铃手作铺</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -35,6 +37,11 @@
               <p class="hero-eyebrow">森林铃音</p>
               <h2>把森林的声音带在身边</h2>
               <p>黄铜铃音 · 森系车挂 · 到店听铃</p>
+              <div class="hero-actions">
+                <button type="button" data-action="open-gift-guide">AI 选款</button>
+                <button type="button" data-nav-target="products">看现货</button>
+                <button type="button" data-nav-target="store">到店预约</button>
+              </div>
             </div>
           </div>
 
@@ -75,36 +82,43 @@
             <div class="case-strip" id="homeCases"></div>
           </section>
 
-          <section class="process-band" aria-label="购买流程">
-            <div class="guide-media">
-              <img src="./assets/forest-bell-dark.png" alt="果壳铃手作产品与门店体验" />
+          <section class="process-band visual-journey" aria-label="从看款到到店确认">
+            <div class="section-head journey-head">
               <div>
-                <span>线下手作体验</span>
-                <strong>先看实物，再确认声音与细节</strong>
+                <p class="kicker">图文流程</p>
+                <h3>从看款到到店确认</h3>
               </div>
+              <button class="text-link" type="button" data-action="submit-booking">预约</button>
             </div>
-            <div class="process-list">
+            <div class="journey-grid">
               <article>
-                <span>01</span>
+                <span class="journey-thumb one" aria-hidden="true"></span>
                 <div>
-                  <strong>看款式氛围</strong>
-                  <p>先看颜色、声音和礼物场景，确认喜欢的整体感觉。</p>
+                  <em>01</em>
+                  <strong>看氛围</strong>
+                  <p>先看颜色、声音和礼物场景。</p>
                 </div>
               </article>
               <article>
-                <span>02</span>
+                <span class="journey-thumb two" aria-hidden="true"></span>
                 <div>
-                  <strong>选现货成品</strong>
-                  <p>现货可直接提交订单，门店确认后安排自提或寄送。</p>
+                  <em>02</em>
+                  <strong>选成品</strong>
+                  <p>现货可直接提交订单确认。</p>
                 </div>
               </article>
               <article>
-                <span>03</span>
+                <span class="journey-thumb three" aria-hidden="true"></span>
                 <div>
-                  <strong>沟通轻定制</strong>
-                  <p>需要改绳色、配件、包装时，先提交咨询再确认方案。</p>
+                  <em>03</em>
+                  <strong>问定制</strong>
+                  <p>绳色、铃音、礼盒先沟通。</p>
                 </div>
               </article>
+            </div>
+            <div class="journey-note">
+              <span>到店可听铃音</span>
+              <strong>门店确认后再安排自提或寄送</strong>
             </div>
           </section>
         </section>
@@ -115,7 +129,10 @@
               <p class="kicker">产品现货</p>
               <h2>产品与现货</h2>
             </div>
-            <button class="small-action" type="button" data-action="open-consult">定制</button>
+            <div class="title-actions">
+              <button class="small-action ghost" type="button" data-action="open-cart">清单</button>
+              <button class="small-action" type="button" data-action="open-consult">定制</button>
+            </div>
           </div>
 
           <label class="search-field">
@@ -259,6 +276,10 @@
               <strong>售后</strong>
               <span>先沟通</span>
             </button>
+            <button type="button" data-action="open-cart">
+              <strong>清单</strong>
+              <span>待确认</span>
+            </button>
           </div>
 
           <section class="content-section">
@@ -361,6 +382,11 @@
 
           <div class="order-list" id="orderList"></div>
         </section>
+
+        <section class="view detail-view" data-view="product-detail" id="productDetailView" aria-label="产品详情"></section>
+        <section class="view detail-view" data-view="case-detail" id="caseDetailView" aria-label="案例详情"></section>
+        <section class="view detail-view" data-view="cart" id="cartView" aria-label="待确认清单"></section>
+        <section class="view detail-view" data-view="checkout" id="checkoutView" aria-label="结算确认"></section>
       </main>
 
       <nav class="bottom-nav" aria-label="底部导航">

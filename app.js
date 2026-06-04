@@ -163,6 +163,11 @@ const state = {
     },
   ],
   agentLoading: false,
+  cart: [],
+  activeProductId: "",
+  activeCaseId: "",
+  caseReturnScreen: "cases",
+  cartReturnScreen: "products",
 };
 
 const productFilterLabels = ["全部", "果壳铃", "包挂", "车挂", "礼盒", "定制"];
@@ -228,6 +233,10 @@ const nodes = {
   productEmpty: document.getElementById("productEmpty"),
   caseFilters: document.getElementById("caseFilters"),
   caseGrid: document.getElementById("caseGrid"),
+  productDetailView: document.getElementById("productDetailView"),
+  caseDetailView: document.getElementById("caseDetailView"),
+  cartView: document.getElementById("cartView"),
+  checkoutView: document.getElementById("checkoutView"),
   sheet: document.getElementById("sheet"),
   sheetTitle: document.getElementById("sheetTitle"),
   sheetContent: document.getElementById("sheetContent"),
@@ -332,6 +341,7 @@ function matchesProduct(product) {
 function renderProductCard(product, options = {}) {
   const compact = options.compact ? " compact-card" : "";
   const visibleTags = product.tags.slice(0, 2);
+  const shortTone = textValue(product.tone).split(/[，,]/)[0] || "可到店试听";
   return `
     <article class="product-card${compact}" data-product-card="${escapeHtml(product.id)}">
       <div class="product-thumb" style="--thumb-x: ${escapeHtml(product.thumbX)}; --thumb-y: ${escapeHtml(product.thumbY)};">
@@ -343,9 +353,14 @@ function renderProductCard(product, options = {}) {
           <span class="price">${money(product.price)}</span>
         </div>
         <div class="tag-row">${visibleTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+        <div class="product-meta">
+          <span>${escapeHtml(product.stock)}</span>
+          <span>${escapeHtml(shortTone)}</span>
+        </div>
         <p>${escapeHtml(product.story)}</p>
-        <div class="card-actions">
+        <div class="card-actions product-card-actions">
           <button type="button" data-action="open-consult" data-product-id="${escapeHtml(product.id)}">问定制</button>
+          <button type="button" data-action="add-cart" data-product-id="${escapeHtml(product.id)}">加清单</button>
           <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">看详情</button>
         </div>
       </div>
@@ -389,7 +404,7 @@ function renderFilters(container, labels, active, action) {
 }
 
 function renderHome() {
-  nodes.homeProducts.innerHTML = products.slice(0, 2).map((product) => renderProductCard(product, { compact: true })).join("");
+  nodes.homeProducts.innerHTML = products.slice(0, 3).map((product) => renderProductCard(product, { compact: true })).join("");
   nodes.homeCases.innerHTML = cases.slice(0, 3).map((item) => renderCaseCard(item, { strip: true })).join("");
 }
 
@@ -451,8 +466,10 @@ function renderOrders() {
 function setScreen(screen) {
   state.screen = screen;
   const shell = document.querySelector(".app-shell");
+  const detailScreens = ["product-detail", "case-detail", "cart", "checkout"];
   shell.dataset.screen = screen;
-  shell.classList.toggle("is-subpage", screen === "points" || screen === "orders");
+  shell.classList.toggle("is-subpage", screen === "points" || screen === "orders" || detailScreens.includes(screen));
+  shell.classList.toggle("is-detail-page", detailScreens.includes(screen));
   document.querySelectorAll("[data-view]").forEach((view) => {
     view.classList.toggle("is-active", view.dataset.view === screen);
   });
@@ -461,6 +478,38 @@ function setScreen(screen) {
   });
   if (screen === "orders") renderOrders();
   nodes.screen.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function miniPageHead(title, badge = "") {
+  return `
+    <header class="mini-page-head">
+      <button class="mini-page-back" type="button" data-action="detail-back" aria-label="返回">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+      </button>
+      <h2>${escapeHtml(title)}</h2>
+      ${
+        badge
+          ? `<span>${escapeHtml(badge)}</span>`
+          : `<button class="mini-page-menu" type="button" data-action="open-agent" aria-label="AI 导购">AI</button>`
+      }
+    </header>
+  `;
+}
+
+function detailBack() {
+  if (state.screen === "checkout") {
+    setScreen("product-detail");
+    return;
+  }
+  if (state.screen === "case-detail") {
+    setScreen(state.caseReturnScreen || "cases");
+    return;
+  }
+  if (state.screen === "cart") {
+    setScreen(state.cartReturnScreen || "products");
+    return;
+  }
+  setScreen("products");
 }
 
 function showToast(message) {
@@ -491,47 +540,236 @@ function closeSheet() {
 function openProduct(productId) {
   const product = findProduct(productId);
   if (!product) return;
+  state.activeProductId = product.id;
   const relatedCase = cases.find((item) => item.productIds.includes(product.id));
+  const relatedProducts = products
+    .filter((item) => item.id !== product.id && (item.type === product.type || item.tags.some((tag) => product.tags.includes(tag))))
+    .slice(0, 3);
+
+  closeSheet();
+  nodes.productDetailView.innerHTML = `
+    <section class="mini-page product-mini-screen">
+      ${miniPageHead("产品详情")}
+      <div class="mini-hero" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};">
+        <span>1/5</span>
+      </div>
+      <div class="mini-gallery-dots" aria-hidden="true">
+        <span class="is-active"></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <div class="mini-title-row">
+        <div>
+          <h3>${escapeHtml(product.name)}</h3>
+          <p>${escapeHtml(product.story)}</p>
+        </div>
+        <strong>${money(product.price)}</strong>
+      </div>
+      <div class="mini-tags">${product.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+      <div class="mini-options" data-sheet-group="rope">
+        <button class="is-selected" type="button" data-value="墨绿绳">颜色</button>
+        <button type="button" data-value="尺寸">尺寸</button>
+        <button type="button" data-value="材质">材质</button>
+      </div>
+      <div class="mini-line"></div>
+      <div class="mini-line short"></div>
+      <section class="mini-info-grid">
+        <div><span>库存</span><strong>${escapeHtml(product.stock)}</strong></div>
+        <div><span>周期</span><strong>${escapeHtml(product.cycle)}</strong></div>
+        <div><span>铃音</span><strong>${escapeHtml(product.tone)}</strong></div>
+        <div><span>规格</span><strong>${escapeHtml(product.specs)}</strong></div>
+      </section>
+      <section class="mini-service-row" aria-label="服务说明">
+        <span>到店试听</span>
+        <span>礼盒包装</span>
+        <span>轻定制</span>
+      </section>
+      <section class="mini-case-link">
+        <h4>用于这款的案例</h4>
+        <button type="button" data-action="${relatedCase ? "open-case" : "show-toast"}" ${relatedCase ? `data-case-id="${escapeHtml(relatedCase.id)}"` : 'data-toast="暂无关联案例"'}>
+          <span>${escapeHtml(relatedCase?.title || "到店选铃音")}</span>
+        </button>
+      </section>
+      <section class="mini-related">
+        <h4>相关推荐</h4>
+        <div>
+          ${relatedProducts
+            .map(
+              (item) => `
+                <button type="button" data-action="open-product" data-product-id="${escapeHtml(item.id)}">
+                  <span style="background-position: ${escapeHtml(item.thumbX)} ${escapeHtml(item.thumbY)};"></span>
+                  <strong>${escapeHtml(item.name)}</strong>
+                  <em>${money(item.price)}</em>
+                </button>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+      <div class="detail-actions mini-actions">
+        <button class="mini-icon-action" type="button" data-action="show-toast" data-toast="已加入收藏">收藏</button>
+        <button class="mini-icon-action" type="button" data-action="show-toast" data-toast="已复制分享文案">分享</button>
+        <button class="secondary-action" type="button" data-action="add-cart" data-product-id="${escapeHtml(product.id)}">加入清单</button>
+        <button class="primary-action" type="button" data-action="open-order" data-product-id="${escapeHtml(product.id)}">立即购买</button>
+      </div>
+    </section>
+  `;
+  setScreen("product-detail");
+}
+
+function getCartEntries() {
+  return state.cart
+    .map((item) => ({
+      ...item,
+      product: findProduct(item.productId),
+    }))
+    .filter((item) => item.product);
+}
+
+function updateCartBadges() {
+  const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+  document.querySelectorAll('[data-action="open-cart"]').forEach((button) => {
+    if (count > 0) {
+      button.dataset.count = String(count);
+    } else {
+      delete button.dataset.count;
+    }
+  });
+}
+
+function addToCart(productId) {
+  const product = findProduct(productId);
+  if (!product) return;
+
+  const existing = state.cart.find((item) => item.productId === productId);
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    state.cart.unshift({ productId, quantity: 1 });
+  }
+  postMiniProgramEvent("cartUpdated", { productId, quantity: existing?.quantity || 1 });
+  updateCartBadges();
+  showToast(`已加入待确认清单：${product.name}`);
+}
+
+function updateCartQuantity(productId, delta) {
+  const item = state.cart.find((entry) => entry.productId === productId);
+  if (!item) return;
+  item.quantity += delta;
+  if (item.quantity <= 0) {
+    state.cart = state.cart.filter((entry) => entry.productId !== productId);
+  }
+  updateCartBadges();
+  openCart();
+}
+
+function openCart() {
+  const entries = getCartEntries();
+  const total = entries.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  if (state.screen !== "cart") {
+    state.cartReturnScreen = ["product-detail", "case-detail", "me"].includes(state.screen) ? state.screen : "products";
+  }
+  closeSheet();
+  nodes.cartView.innerHTML = `
+    <section class="mini-page cart-page">
+      ${miniPageHead("待确认清单")}
+      <section class="cart-sheet">
+        ${
+          entries.length
+            ? `
+              <div class="cart-list">
+                ${entries
+                  .map(
+                    ({ product, quantity }) => `
+                      <article class="cart-item">
+                        <div class="cart-thumb" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};" aria-hidden="true"></div>
+                        <div>
+                          <h3>${escapeHtml(product.name)}</h3>
+                          <p>${escapeHtml(product.stock)} · ${escapeHtml(product.type)}</p>
+                          <strong>${money(product.price)}</strong>
+                        </div>
+                        <div class="cart-stepper">
+                          <button type="button" data-action="cart-quantity" data-product-id="${escapeHtml(product.id)}" data-delta="-1">-</button>
+                          <span>${quantity}</span>
+                          <button type="button" data-action="cart-quantity" data-product-id="${escapeHtml(product.id)}" data-delta="1">+</button>
+                        </div>
+                      </article>
+                    `
+                  )
+                  .join("")}
+              </div>
+              <div class="cart-summary">
+                <span>预估合计</span>
+                <strong>${money(total)}</strong>
+              </div>
+              <div class="detail-actions checkout-actions">
+                <div>
+                  <span>预估合计</span>
+                  <strong>${money(total)}</strong>
+                </div>
+                <button class="primary-action" type="button" data-action="checkout-cart">去确认</button>
+              </div>
+            `
+            : `
+              <div class="cart-empty">
+                <strong>清单还是空的</strong>
+                <span>把喜欢的果壳铃先加入清单，再逐件确认绳色、铃音和配送方式。</span>
+                <button class="primary-action" type="button" data-action="detail-back">去选款</button>
+              </div>
+            `
+        }
+      </section>
+    </section>
+  `;
+  setScreen("cart");
+}
+
+function checkoutCart() {
+  const first = getCartEntries()[0];
+  if (!first) {
+    showToast("清单还是空的");
+    return;
+  }
+  openOrder(first.product.id);
+}
+
+function openGiftGuide() {
+  const giftProducts = products
+    .filter((product) => product.type === "车挂" || product.tags.includes("礼盒") || product.tags.includes("现货"))
+    .slice(0, 4);
 
   openSheet(
-    "产品详情",
+    "AI 选款",
     `
-      <section class="mini-screen product-mini-screen">
-        <div class="mini-hero" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};">
-          <span>1/5</span>
+      <section class="gift-guide">
+        <div class="gift-guide-head">
+          <span>根据用途快速缩小选择</span>
+          <strong>你想把铃送给谁？</strong>
         </div>
-        <div class="mini-title-row">
+        <div class="gift-scenarios">
+          <button type="button" data-action="gift-agent" data-message="我想送新车朋友，推荐什么">送新车朋友</button>
+          <button type="button" data-action="gift-agent" data-message="我想买挂包上的森系小挂件">挂包日常用</button>
+          <button type="button" data-action="gift-agent" data-message="我想要一份有包装的生日礼物">生日礼物</button>
+          <button type="button" data-action="gift-agent" data-message="预算100以内，有没有现货推荐">预算 100 内</button>
+        </div>
+        <section class="mini-related gift-recommend">
+          <h4>先看这些</h4>
           <div>
-            <h3>${escapeHtml(product.name)}</h3>
-            <p>${escapeHtml(product.story)}</p>
+            ${giftProducts
+              .map(
+                (product) => `
+                  <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
+                    <span style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></span>
+                    <strong>${escapeHtml(product.name)}</strong>
+                    <em>${money(product.price)}</em>
+                  </button>
+                `
+              )
+              .join("")}
           </div>
-          <strong>${money(product.price)}</strong>
-        </div>
-        <div class="mini-tags">${product.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
-        <div class="mini-options" data-sheet-group="rope">
-          <button class="is-selected" type="button" data-value="墨绿绳">颜色</button>
-          <button type="button" data-value="尺寸">尺寸</button>
-          <button type="button" data-value="材质">材质</button>
-        </div>
-        <div class="mini-line"></div>
-        <div class="mini-line short"></div>
-        <section class="mini-info-grid">
-          <div><span>库存</span><strong>${escapeHtml(product.stock)}</strong></div>
-          <div><span>周期</span><strong>${escapeHtml(product.cycle)}</strong></div>
-          <div><span>铃音</span><strong>${escapeHtml(product.tone)}</strong></div>
-          <div><span>规格</span><strong>${escapeHtml(product.specs)}</strong></div>
         </section>
-        <section class="mini-case-link">
-          <h4>用于这款的案例</h4>
-          <button type="button" data-action="${relatedCase ? "open-case" : "show-toast"}" ${relatedCase ? `data-case-id="${escapeHtml(relatedCase.id)}"` : 'data-toast="暂无关联案例"'}>
-            <span>${escapeHtml(relatedCase?.title || "到店选铃音")}</span>
-          </button>
-        </section>
-        <div class="sheet-actions detail-actions mini-actions">
-          <button class="mini-icon-action" type="button" data-action="show-toast" data-toast="已加入收藏">收藏</button>
-          <button class="secondary-action" type="button" data-action="show-toast" data-toast="已加入待确认清单">加入购物车</button>
-          <button class="primary-action" type="button" data-action="open-order" data-product-id="${escapeHtml(product.id)}">立即购买</button>
-        </div>
       </section>
     `
   );
@@ -540,55 +778,64 @@ function openProduct(productId) {
 function openCase(caseId) {
   const item = cases.find((caseItem) => caseItem.id === caseId);
   if (!item) return;
+  state.caseReturnScreen = state.screen === "product-detail" ? "product-detail" : "cases";
+  state.activeCaseId = item.id;
 
   const related = item.productIds.map(findProduct).filter(Boolean);
-  openSheet(
-    "案例详情",
-    `
-      <section class="mini-screen case-mini-screen">
-        <div class="mini-hero case-hero" style="background-position: ${escapeHtml(item.thumbX)} ${escapeHtml(item.thumbY)};">
-          <div>
-            <span>森系 | 车挂定制</span>
-            <strong>${escapeHtml(item.title)}</strong>
-          </div>
-          <em>1/6</em>
+  closeSheet();
+  nodes.caseDetailView.innerHTML = `
+    <section class="mini-page case-mini-screen">
+      ${miniPageHead("案例详情")}
+      <div class="mini-hero case-hero" style="background-position: ${escapeHtml(item.thumbX)} ${escapeHtml(item.thumbY)};">
+        <div>
+          <span>森系 | 车挂定制</span>
+          <strong>${escapeHtml(item.title)}</strong>
         </div>
-        <div class="mini-tags">
-          <span>${escapeHtml(item.type)}</span>
-          <span>门店</span>
-        </div>
-        <div class="mini-line"></div>
-        <section class="mini-story-card">
-          <div><span>使用场景</span><strong>${escapeHtml(item.scene)}</strong></div>
-          <div><span>搭配方案</span><strong>${escapeHtml(item.summary)}</strong></div>
-          <div><span>设计目的</span><strong>${escapeHtml(item.result)}</strong></div>
-        </section>
-        <section class="mini-related">
-          <h4>关联产品</h4>
-          <div>
-            ${related
-              .map(
-                (product) => `
-                  <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
-                    <span style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></span>
-                    <strong>${escapeHtml(product.name)}</strong>
-                  </button>
-                `
-              )
-              .join("")}
-          </div>
-        </section>
-        <div class="mini-store-row">
-          <span>承接门店</span>
-          <strong>${escapeHtml(storeInfo.address)}</strong>
-        </div>
-        <div class="sheet-actions detail-actions mini-actions">
-          <button class="mini-icon-action" type="button" data-action="copy-address">电话</button>
-          <button class="primary-action" type="button" data-action="submit-booking">预约咨询</button>
+        <em>1/6</em>
+      </div>
+      <div class="mini-tags">
+        <span>${escapeHtml(item.type)}</span>
+        <span>门店</span>
+      </div>
+      <div class="mini-line"></div>
+      <section class="mini-story-card">
+        <div><span>使用场景</span><strong>${escapeHtml(item.scene)}</strong></div>
+        <div><span>搭配方案</span><strong>${escapeHtml(item.summary)}</strong></div>
+        <div><span>设计目的</span><strong>${escapeHtml(item.result)}</strong></div>
+      </section>
+      <section class="mini-needs" aria-label="客户需求">
+        <article><span>安</span><strong>出行平安</strong></article>
+        <article><span>森</span><strong>自然风格</strong></article>
+        <article><span>音</span><strong>清亮铃音</strong></article>
+        <article><span>礼</span><strong>礼盒包装</strong></article>
+      </section>
+      <section class="mini-related">
+        <h4>关联产品</h4>
+        <div>
+          ${related
+            .map(
+              (product) => `
+                <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
+                  <span style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></span>
+                  <strong>${escapeHtml(product.name)}</strong>
+                  <em>${money(product.price)}</em>
+                </button>
+              `
+            )
+            .join("")}
         </div>
       </section>
-    `
-  );
+      <div class="mini-store-row">
+        <span>承接门店</span>
+        <strong>${escapeHtml(storeInfo.address)}</strong>
+      </div>
+      <div class="detail-actions mini-actions">
+        <button class="mini-icon-action" type="button" data-action="copy-address">电话</button>
+        <button class="primary-action" type="button" data-action="submit-booking">预约咨询</button>
+      </div>
+    </section>
+  `;
+  setScreen("case-detail");
 }
 
 function openConsult(productId = "") {
@@ -621,55 +868,63 @@ function openOrder(productId) {
   const product = findProduct(productId);
   if (!product) return;
 
-  openSheet(
-    "结算确认",
-    `
-      <form class="mini-screen checkout-mini-screen sheet-form" id="orderForm">
-        <input name="productId" type="hidden" value="${escapeHtml(product.id)}" />
-        <section class="checkout-address">
-          <span>收货地址 · 姓名 电话</span>
-          <label>
-            <input name="customerName" type="text" placeholder="姓名" />
-          </label>
-          <label>
-            <input name="contact" type="text" placeholder="手机号或微信号" />
-          </label>
-          <label>
-            <textarea rows="2" name="address" placeholder="详细地址或到店自提时间"></textarea>
-          </label>
-        </section>
-        <section class="checkout-product">
-          <div class="checkout-thumb" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></div>
-          <div>
-            <h3>${escapeHtml(product.name)} · 规格</h3>
-            <p>×1</p>
-          </div>
-          <strong>${money(product.price)}</strong>
-        </section>
-        <div class="mini-options" data-sheet-group="delivery">
-          <button class="is-selected" type="button" data-value="快递">快递</button>
-          <button type="button" data-value="到店自提">到店自提</button>
-          <button type="button" data-value="礼盒包装">礼盒包装</button>
-        </div>
-        <label class="checkout-note">
-          <textarea rows="2" name="note" placeholder="备注：绳色、铃音、祝福卡内容"></textarea>
+  state.activeProductId = product.id;
+  closeSheet();
+  nodes.checkoutView.innerHTML = `
+    <form class="mini-page checkout-mini-screen sheet-form" id="orderForm">
+      ${miniPageHead("结算确认", "小程序原生页")}
+      <input name="productId" type="hidden" value="${escapeHtml(product.id)}" />
+      <section class="checkout-address">
+        <span>收货信息</span>
+        <label>
+          <input name="customerName" type="text" placeholder="姓名" />
         </label>
-        <div class="checkout-total">
-          <div><span>优惠券</span><strong>></strong></div>
-          <div><span>积分抵扣</span><strong>-¥ 0</strong></div>
-          <div><span>运费</span><strong>¥ 0</strong></div>
-          <div><span>实付</span><strong>${money(product.price)}</strong></div>
+        <label>
+          <input name="contact" type="text" placeholder="手机号或微信号" />
+        </label>
+        <label>
+          <textarea rows="2" name="address" placeholder="详细地址或到店自提时间"></textarea>
+        </label>
+      </section>
+      <section class="checkout-product">
+        <div class="checkout-thumb" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></div>
+        <div>
+          <h3>${escapeHtml(product.name)} · 规格</h3>
+          <p>×1</p>
         </div>
-        <div class="sheet-actions detail-actions checkout-actions">
-          <div>
-            <span>实付</span>
-            <strong>${money(product.price)}</strong>
-          </div>
-          <button class="primary-action" type="submit">微信支付</button>
+        <strong>${money(product.price)}</strong>
+      </section>
+      <div class="mini-options" data-sheet-group="delivery">
+        <button class="is-selected" type="button" data-value="快递">快递</button>
+        <button type="button" data-value="到店自提">到店自提</button>
+        <button type="button" data-value="礼盒包装">礼盒包装</button>
+      </div>
+      <label class="checkout-note">
+        <textarea rows="2" name="note" placeholder="备注：绳色、铃音、祝福卡内容"></textarea>
+      </label>
+      <div class="checkout-total">
+        <div><span>优惠券</span><strong>无可用 ></strong></div>
+        <div><span>积分抵扣</span><strong>- ¥ 0</strong></div>
+        <div><span>运费</span><strong>¥ 0</strong></div>
+        <div><span>实付金额</span><strong>${money(product.price)}</strong></div>
+      </div>
+      <section class="checkout-address checkout-store">
+        <span>预约到店（可选）</span>
+        <div class="mini-store-row inline">
+          <strong>${escapeHtml(storeInfo.name)}</strong>
+          <span>${escapeHtml(storeInfo.address)}</span>
         </div>
-      </form>
-    `
-  );
+      </section>
+      <div class="detail-actions checkout-actions">
+        <div>
+          <span>实付</span>
+          <strong>${money(product.price)}</strong>
+        </div>
+        <button class="primary-action" type="submit">微信支付</button>
+      </div>
+    </form>
+  `;
+  setScreen("checkout");
 }
 
 function findOrder(orderId) {
@@ -876,7 +1131,7 @@ function renderAgentMessages() {
   const submitButton = nodes.agentForm?.querySelector('button[type="submit"]');
   if (submitButton) {
     submitButton.disabled = state.agentLoading;
-    submitButton.textContent = state.agentLoading ? "等待" : "发送";
+    submitButton.textContent = state.agentLoading ? "思考中" : "发送";
   }
 
   nodes.agentMessages.scrollTop = nodes.agentMessages.scrollHeight;
@@ -934,6 +1189,17 @@ function textValue(value) {
   return String(value ?? "").trim();
 }
 
+function postMiniProgramEvent(type, data = {}) {
+  if (!window.wx?.miniProgram?.postMessage) return false;
+  window.wx.miniProgram.postMessage({
+    data: {
+      type,
+      ...data,
+    },
+  });
+  return true;
+}
+
 async function submitBooking() {
   const type = document.querySelector('[data-booking-group="type"] .is-selected')?.dataset.value || "定制咨询";
   const time = document.querySelector('[data-booking-group="time"] .is-selected')?.dataset.value || "今天 15:00";
@@ -944,6 +1210,7 @@ async function submitBooking() {
       method: "POST",
       body: JSON.stringify({ type, time, note }),
     });
+    postMiniProgramEvent("bookingSubmitted", { bookingType: type, time });
     showToast(`预约已提交：${type}，${time}`);
     const noteInput = document.getElementById("bookingNote");
     if (noteInput) noteInput.value = "";
@@ -962,11 +1229,22 @@ async function submitConsultForm(form) {
     topic,
   };
 
+  if (!textValue(payload.message)) {
+    showToast("先写一下想咨询的内容");
+    return;
+  }
+
+  if (!textValue(payload.contact)) {
+    showToast("请留下微信号或手机号");
+    return;
+  }
+
   try {
     await apiRequest("/consultations", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    postMiniProgramEvent("consultationSubmitted", payload);
     closeSheet();
     showToast("咨询已提交，后台可查看");
   } catch (error) {
@@ -986,11 +1264,27 @@ async function submitOrderForm(form) {
     note: formData.get("note") || "",
   };
 
+  if (!textValue(payload.customerName)) {
+    showToast("请填写姓名");
+    return;
+  }
+
+  if (!textValue(payload.contact)) {
+    showToast("请填写手机号或微信号");
+    return;
+  }
+
+  if (!textValue(payload.address)) {
+    showToast(delivery === "到店自提" ? "请填写自提时间" : "请填写收货地址");
+    return;
+  }
+
   try {
     const order = await apiRequest("/orders", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    postMiniProgramEvent("orderSubmitted", { orderId: order.id, orderNo: order.orderNo, productId: payload.productId });
     orders = [order, ...orders.filter((item) => item.id !== order.id)];
     closeSheet();
     showToast("订单已提交，等待门店确认");
@@ -1028,14 +1322,11 @@ function openMap() {
   const mode = document.querySelector('[data-sheet-group="route"] .is-selected')?.dataset.value || "walk";
   const url = buildMapUrl(mode);
   if (window.wx?.miniProgram?.postMessage) {
-    window.wx.miniProgram.postMessage({
-      data: {
-        type: "openLocation",
-        name: storeInfo.name,
-        address: storeInfo.address,
-        latitude: storeInfo.latitude,
-        longitude: storeInfo.longitude,
-      },
+    postMiniProgramEvent("openLocation", {
+      name: storeInfo.name,
+      address: storeInfo.address,
+      latitude: storeInfo.latitude,
+      longitude: storeInfo.longitude,
     });
     showToast("已发送门店导航");
     return;
@@ -1081,6 +1372,17 @@ function bindEvents() {
       if (action === "open-case") openCase(caseId);
       if (action === "open-consult") openConsult(productId);
       if (action === "open-order") openOrder(productId);
+      if (action === "detail-back") detailBack();
+      if (action === "add-cart") addToCart(productId);
+      if (action === "open-cart") openCart();
+      if (action === "cart-quantity") updateCartQuantity(productId, Number(button.dataset.delta) || 0);
+      if (action === "checkout-cart") checkoutCart();
+      if (action === "open-gift-guide") openGiftGuide();
+      if (action === "gift-agent") {
+        closeSheet();
+        openAgent();
+        sendAgentMessage(button.dataset.message);
+      }
       if (action === "open-agent") openAgent();
       if (action === "close-agent") closeAgent();
       if (action === "agent-open-product") {
@@ -1174,6 +1476,7 @@ async function init() {
   renderCases();
   renderOrders();
   bindEvents();
+  updateCartBadges();
 }
 
 init();

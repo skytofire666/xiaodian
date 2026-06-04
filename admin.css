@@ -193,6 +193,45 @@ button {
   color: var(--faint);
 }
 
+.backend-status,
+.shop-link {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.backend-status {
+  padding: 0 11px;
+  background: #3a3d38;
+  color: #d5d5ce;
+}
+
+.backend-status.is-online {
+  background: var(--green-deep);
+  color: var(--green);
+}
+
+.backend-status.is-offline {
+  background: var(--amber-deep);
+  color: var(--amber);
+}
+
+.shop-link {
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.shop-link:hover {
+  border-color: var(--blue-deep);
+  color: var(--blue);
+}
+
 .avatar-button {
   width: 38px;
   height: 38px;
@@ -244,6 +283,49 @@ button {
 
 .stat-card.is-warm strong {
   color: var(--amber);
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ops-grid button {
+  min-height: 118px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #242622;
+  color: var(--text);
+  padding: 16px;
+  text-align: left;
+}
+
+.ops-grid button:hover {
+  border-color: #6a6e67;
+  background: #2f312d;
+}
+
+.ops-grid span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 820;
+}
+
+.ops-grid strong {
+  color: var(--blue);
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.ops-grid em {
+  color: var(--faint);
+  font-style: normal;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .section-panel {
@@ -1115,6 +1197,7 @@ button {
   }
 
   .stat-grid,
+  .ops-grid,
   .card-grid {
     grid-template-columns: 1fr;
   }

@@ -25,6 +25,7 @@ const nodes = {
   crumb: document.getElementById("adminCrumb"),
   content: document.getElementById("adminContent"),
   search: document.getElementById("globalSearch"),
+  status: document.getElementById("backendStatus"),
   toast: document.getElementById("adminToast"),
 };
 
@@ -96,6 +97,7 @@ const data = {
 const pageConfigs = {
   products: {
     title: "产品管理 / 产品列表",
+    desc: "维护前台展示的商品、库存、价格、标签和上下架状态。",
     addLabel: "新增产品",
     filters: ["分类", "状态"],
     search: "搜索产品",
@@ -112,6 +114,7 @@ const pageConfigs = {
   },
   cases: {
     title: "案例管理 / 案例列表",
+    desc: "维护前台案例种草内容，并关联商品形成购买路径。",
     addLabel: "新增案例",
     filters: ["标签", "门店", "状态"],
     search: "搜索案例",
@@ -127,6 +130,7 @@ const pageConfigs = {
   },
   stores: {
     title: "门店管理 / 门店列表",
+    desc: "维护线下门店地址、电话、营业时间和到店服务。",
     addLabel: "新增门店",
     filters: ["城市", "状态"],
     search: "搜索门店",
@@ -142,11 +146,12 @@ const pageConfigs = {
   },
   orders: {
     title: "订单管理 / 订单列表",
+    desc: "处理前台提交的订单，确认库存、支付方式和物流信息。",
     filters: ["日期", "来源"],
     search: "订单号 / 手机",
     total: "共 1,204 条",
     tabKey: "orders",
-    tabs: ["全部", "待付款", "待发货", "待收货", "已完成", "退款"],
+    tabs: ["全部", "待确认", "待付款", "待发货", "待收货", "已完成", "退款"],
     columns: [
       { key: "no", label: "订单号" },
       { key: "member", label: "会员" },
@@ -159,6 +164,7 @@ const pageConfigs = {
   },
   members: {
     title: "会员管理 / 会员列表",
+    desc: "第一版先作为会员画像和消费记录入口，后续可接登录体系。",
     addLabel: "导出",
     filters: ["等级", "标签"],
     search: "昵称 / 手机",
@@ -175,6 +181,7 @@ const pageConfigs = {
   },
   leads: {
     title: "线索管理 / 线索列表",
+    desc: "汇总前台定制咨询和到店预约，方便门店跟进。",
     filters: ["门店", "来源"],
     search: "姓名 / 手机",
     total: "共 248 条",
@@ -192,6 +199,7 @@ const pageConfigs = {
   },
   marketing: {
     title: "营销中心 / 优惠券",
+    desc: "配置优惠券、到店活动、积分兑换等运营动作。",
     addLabel: "创建优惠券",
     total: "共 12 条",
     tabKey: "marketing",
@@ -463,17 +471,49 @@ function mapStore(storeInfo = {}) {
   };
 }
 
+function mapBooking(booking) {
+  return {
+    id: booking.id,
+    customer: textValue(booking.type, "到店预约"),
+    phone: textValue(booking.time, "待确认时间"),
+    source: "到店预约",
+    store: "主门店",
+    status: textValue(booking.status, "待跟进"),
+    action: "跟进",
+    raw: booking,
+  };
+}
+
+function mapConsultation(consultation) {
+  return {
+    id: consultation.id,
+    customer: textValue(consultation.topic, "定制咨询"),
+    phone: textValue(consultation.contact, "待留联系方式"),
+    source: "AI / 前台咨询",
+    store: textValue(consultation.productId, "未绑定商品"),
+    status: textValue(consultation.status, "待跟进"),
+    action: "跟进",
+    raw: consultation,
+  };
+}
+
 function applyBackendStore(store) {
   const products = Array.isArray(store.products) ? store.products.map(mapProduct) : [];
   const cases = Array.isArray(store.cases) ? store.cases.map(mapCase) : [];
   const orders = Array.isArray(store.orders) ? store.orders.map(mapOrder) : [];
   const stores = [mapStore(store.storeInfo)];
+  const bookings = Array.isArray(store.bookings) ? store.bookings.map(mapBooking) : [];
+  const consultations = Array.isArray(store.consultations) ? store.consultations.map(mapConsultation) : [];
+  const leads = [...consultations, ...bookings];
   const todaySales = orders.reduce((sum, order) => sum + moneyValue(order.amount), 0);
+  const pendingOrders = orders.filter((item) => ["待确认", "待付款"].includes(item.status)).length;
+  const deliveryOrders = orders.filter((item) => item.status === "待发货").length;
 
   replaceRows(data.products, products);
   replaceRows(data.cases, cases);
   replaceRows(data.orders, orders);
   replaceRows(data.stores, stores);
+  replaceRows(data.leads, leads);
   replaceRows(data.dashboardOrders, orders.slice(0, 4).map((order) => ({
     id: order.id,
     no: order.no,
@@ -484,11 +524,16 @@ function applyBackendStore(store) {
     raw: order.raw,
   })));
   replaceRows(data.stats, [
-    { label: "今日订单", value: String(orders.length || 0) },
-    { label: "今日销售额", value: `¥${todaySales.toLocaleString("zh-CN")}` },
+    { label: "订单总数", value: String(orders.length || 0) },
+    { label: "订单金额", value: `¥${todaySales.toLocaleString("zh-CN")}` },
     { label: "上架产品", value: String(products.filter((item) => item.status === "在售").length) },
-    { label: "待跟进线索", value: String(data.leads.filter((item) => item.status !== "已成交").length), tone: "warm" },
+    { label: "待处理事项", value: String(pendingOrders + deliveryOrders + leads.filter((item) => item.status !== "已成交").length), tone: "warm" },
   ]);
+  pageConfigs.products.total = `共 ${products.length} 条`;
+  pageConfigs.cases.total = `共 ${cases.length} 条`;
+  pageConfigs.orders.total = `共 ${orders.length} 条`;
+  pageConfigs.stores.total = `共 ${stores.length} 条`;
+  pageConfigs.leads.total = `共 ${leads.length} 条`;
 }
 
 async function loadBackendData({ silent = false } = {}) {
@@ -725,6 +770,7 @@ function renderDetailHead(title, primary = "保存") {
 
 function selectedRow(section = state.section) {
   const rows = pageConfigs[section]?.rows || [];
+  if (!state.selectedId) return {};
   return rows.find((row) => row.id === state.selectedId) || rows[0] || {};
 }
 
@@ -902,7 +948,7 @@ function renderOrderDetail() {
             <tbody><tr><td>${escapeHtml(order.productName || "雪人车挂")}</td><td>×${escapeHtml(order.quantity || 1)}</td><td>¥${escapeHtml(order.price || 0)}</td></tr></tbody>
           </table>
           <div class="price-list">
-            <p><span>优惠券 / 积分抵扣</span><strong>-¥20</strong></p>
+            <p><span>优惠券 / 积分抵扣</span><strong>-¥0</strong></p>
             <p><span>运费</span><strong>¥0</strong></p>
             <p><span>实付</span><strong class="price-blue">¥${escapeHtml(order.price || 0)}</strong></p>
           </div>
@@ -935,6 +981,8 @@ function renderStoreEditor() {
             ${renderField("电话", store.phone || "输入", { name: "phone" })}
             ${renderField("营业时间", store.hours || "10:00 - 22:00", { name: "hours" })}
             ${renderField("地址（地图选点）", store.address || "", { name: "address", wide: true, placeholder: "输入门店地址" })}
+            ${renderField("经度", store.longitude || "", { name: "longitude", placeholder: "例如 120.127000" })}
+            ${renderField("纬度", store.latitude || "", { name: "latitude", placeholder: "例如 30.245000" })}
           </div>
           <div class="map-box">地图 · 拖动选点</div>
           <div class="field-block">
@@ -1052,26 +1100,32 @@ function renderBannerEditor() {
 
 function renderLeadDetail() {
   setTitle("线索管理 / 线索详情", "线索管理 / 第二层");
+  const lead = selectedRow("leads");
+  const raw = lead.raw || {};
+  const isBooking = lead.source === "到店预约";
+  const demand = isBooking
+    ? [raw.type, raw.time, raw.note].filter(Boolean).join(" / ")
+    : [raw.topic, raw.message].filter(Boolean).join(" / ");
   return `
     <section class="detail-page">
       <div class="detail-head">
         <h2>线索管理 / 线索详情</h2>
-        ${renderStatus("跟进中")}
+        ${renderStatus(lead.status || "待跟进")}
       </div>
       <div class="detail-grid">
         <div class="detail-card">
           <h3>客户信息</h3>
-          <p class="muted-line">姓名：王**  手机：138****</p>
-          <p class="muted-line">来源：案例预约</p>
-          <p class="muted-line">标签：新车礼物、预算明确</p>
-          ${renderField("需求描述", "想了解节日礼物 / 预算 100 左右...", { wide: true })}
-          ${renderSelectField("线索阶段", ["待跟进", "跟进中", "已成交", "已关闭"], "跟进中", { wide: true })}
+          <p class="muted-line">来源：${escapeHtml(lead.source || "前台提交")}</p>
+          <p class="muted-line">联系信息：${escapeHtml(lead.phone || "待补充")}</p>
+          <p class="muted-line">关联：${escapeHtml(lead.store || "主门店")}</p>
+          ${renderField("需求描述", demand || "待补充需求", { wide: true })}
+          ${renderSelectField("线索阶段", ["待跟进", "跟进中", "已成交", "已关闭"], lead.status || "待跟进", { wide: true })}
         </div>
         <aside class="detail-card side-card">
           <h3>跟进记录</h3>
           <ol class="timeline">
-            <li><strong>电话沟通，确认预算</strong><span>今日 14:20 · 运营小李</span></li>
-            <li><strong>分配到门店</strong><span>昨日 18:10</span></li>
+            <li><strong>前台提交：${escapeHtml(lead.customer || "新线索")}</strong><span>${escapeHtml(raw.createdAt || "刚刚")} · 系统</span></li>
+            <li><strong>等待门店确认</strong><span>建议优先确认预算、用途、时间和联系方式</span></li>
           </ol>
           ${renderField("跟进内容", "", { wide: true, placeholder: "填写跟进记录..." })}
           <button class="full-button" type="button" data-add-action="提交跟进">提交</button>
@@ -1149,6 +1203,10 @@ function renderDashboard() {
     { key: "status", label: "状态", type: "status" },
     { key: "action", label: "操作", type: "action" },
   ];
+  const pendingCount = data.orders.filter((item) => ["待确认", "待付款"].includes(item.status)).length;
+  const deliveryCount = data.orders.filter((item) => item.status === "待发货").length;
+  const bookingCount = data.leads.filter((item) => item.source === "到店预约").length;
+  const consultCount = data.leads.filter((item) => item.source !== "到店预约" && item.status !== "已成交").length;
 
   return `
     <div class="content-stack">
@@ -1165,11 +1223,34 @@ function renderDashboard() {
           .join("")}
       </div>
 
+      <section class="ops-grid" aria-label="今日待办">
+        <button type="button" data-section-shortcut="orders" data-tab-shortcut="待确认">
+          <span>待确认订单</span>
+          <strong>${pendingCount}</strong>
+          <em>先确认库存和联系方式</em>
+        </button>
+        <button type="button" data-section-shortcut="orders" data-tab-shortcut="待发货">
+          <span>待发货</span>
+          <strong>${deliveryCount}</strong>
+          <em>补快递公司和单号</em>
+        </button>
+        <button type="button" data-section-shortcut="leads">
+          <span>到店预约</span>
+          <strong>${bookingCount}</strong>
+          <em>确认时间、选品和自提</em>
+        </button>
+        <button type="button" data-section-shortcut="leads">
+          <span>定制咨询</span>
+          <strong>${consultCount}</strong>
+          <em>绳色、铃音、礼盒需求</em>
+        </button>
+      </section>
+
       <section class="section-panel">
         <div class="section-head">
           <div>
             <h2>最近订单</h2>
-            <p>实时同步小程序、H5 与门店订单。</p>
+            <p>同步前台提交的订单，优先处理待确认和待发货。</p>
           </div>
           <div class="filter-group">
             <button class="filter-chip" type="button">全部状态</button>
@@ -1192,7 +1273,7 @@ function renderListPage(section) {
       <div class="section-head">
         <div>
           <h2>${escapeHtml(config.title)}</h2>
-          <p>一级列表页，支持筛选、搜索、分页与行操作。</p>
+          <p>${escapeHtml(config.desc || "支持筛选、搜索、分页与行操作。")}</p>
         </div>
         ${
           config.addLabel
@@ -1319,6 +1400,11 @@ function render() {
   renderNav();
   nodes.content.innerHTML = renderContent();
   nodes.search.value = state.search;
+  if (nodes.status) {
+    nodes.status.textContent = state.backend.loading ? "连接中" : state.backend.connected ? "数据已连接" : "本地预览";
+    nodes.status.classList.toggle("is-online", state.backend.connected);
+    nodes.status.classList.toggle("is-offline", !state.backend.loading && !state.backend.connected);
+  }
 }
 
 function bindEvents() {
@@ -1344,6 +1430,19 @@ function bindEvents() {
   });
 
   nodes.content.addEventListener("click", (event) => {
+    const shortcut = event.target.closest("[data-section-shortcut]");
+    if (shortcut) {
+      state.section = shortcut.dataset.sectionShortcut;
+      state.detail = "";
+      state.selectedId = "";
+      state.search = "";
+      if (shortcut.dataset.tabShortcut && state.tabs[state.section] !== undefined) {
+        state.tabs[state.section] = shortcut.dataset.tabShortcut;
+      }
+      render();
+      return;
+    }
+
     const tab = event.target.closest("[data-tab-key]");
     if (tab) {
       state.tabs[tab.dataset.tabKey] = tab.dataset.tab;
