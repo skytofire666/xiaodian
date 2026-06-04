@@ -3,182 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>果壳铃手作铺后台</title>
+    <title>品牌后台｜果壳铃手作铺</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./admin.css" />
   </head>
   <body>
-    <header class="admin-top">
-      <div>
-        <p>门店后台</p>
-        <h1>果壳铃手作铺</h1>
-      </div>
-      <a href="./index.html">查看店铺</a>
-    </header>
+    <div class="admin-shell">
+      <aside class="admin-sidebar" aria-label="后台主导航">
+        <a class="admin-brand" href="./index.html" aria-label="返回前台店铺">品牌后台</a>
+        <nav class="admin-nav" id="adminNav"></nav>
+      </aside>
 
-    <main class="admin-layout">
-      <section class="summary-grid" id="summaryGrid" aria-label="经营概览"></section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p>门店资料</p>
-            <h2>基础信息</h2>
+      <main class="admin-main">
+        <header class="admin-header">
+          <div class="title-block">
+            <p id="adminCrumb">数据看板</p>
+            <h1 id="adminTitle">数据看板</h1>
           </div>
-          <button type="button" form="storeForm" data-action="save-store">保存</button>
-        </div>
-        <form class="form-grid" id="storeForm">
-          <label>
-            店铺名
-            <input name="name" type="text" />
-          </label>
-          <label>
-            电话/微信
-            <input name="phone" type="text" />
-          </label>
-          <label class="wide">
-            地址
-            <input name="address" type="text" />
-          </label>
-          <label>
-            营业时间
-            <input name="hours" type="text" />
-          </label>
-          <label>
-            经度
-            <input name="longitude" type="number" step="0.000001" />
-          </label>
-          <label>
-            纬度
-            <input name="latitude" type="number" step="0.000001" />
-          </label>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p>商品管理</p>
-            <h2>新增或修改商品</h2>
+          <div class="header-actions">
+            <label class="search-box" aria-label="搜索">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
+              </svg>
+              <input id="globalSearch" type="search" placeholder="搜索" autocomplete="off" />
+            </label>
+            <button class="avatar-button" type="button" aria-label="账号"></button>
           </div>
-          <button type="button" data-action="clear-product">新建</button>
-        </div>
-        <form class="form-grid" id="productForm">
-          <input name="editingId" type="hidden" />
-          <label>
-            商品 ID
-            <input name="id" type="text" placeholder="例如 walnut-bell" />
-          </label>
-          <label>
-            商品名
-            <input name="name" type="text" required />
-          </label>
-          <label>
-            分类
-            <input name="type" type="text" placeholder="果壳铃 / 包挂 / 车挂" />
-          </label>
-          <label>
-            价格
-            <input name="price" type="number" min="0" step="1" />
-          </label>
-          <label class="wide">
-            标签
-            <input name="tags" type="text" placeholder="用逗号分隔，例如 清亮,现货,车挂" />
-          </label>
-          <label class="wide">
-            商品故事
-            <textarea name="story" rows="3"></textarea>
-          </label>
-          <label>
-            材质
-            <input name="material" type="text" />
-          </label>
-          <label>
-            尺寸重量
-            <input name="specs" type="text" />
-          </label>
-          <label>
-            周期
-            <input name="cycle" type="text" />
-          </label>
-          <label>
-            库存
-            <input name="stock" type="text" />
-          </label>
-          <label>
-            铃音
-            <input name="tone" type="text" />
-          </label>
-          <label>
-            保养
-            <input name="care" type="text" />
-          </label>
-          <label>
-            图片横向位置
-            <input name="thumbX" type="text" placeholder="50%" />
-          </label>
-          <label>
-            图片纵向位置
-            <input name="thumbY" type="text" placeholder="58%" />
-          </label>
-          <label class="checkline">
-            <input name="active" type="checkbox" checked />
-            上架展示
-          </label>
-          <div class="form-actions wide">
-            <button type="submit">保存商品</button>
-          </div>
-        </form>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>商品</th>
-                <th>分类</th>
-                <th>价格</th>
-                <th>库存</th>
-                <th>状态</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="productRows"></tbody>
-          </table>
-        </div>
-      </section>
+        </header>
 
-      <section class="two-column">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <p>订单</p>
-              <h2>订单处理</h2>
-            </div>
-          </div>
-          <div class="stack-list" id="orderList"></div>
-        </div>
+        <section class="admin-content" id="adminContent" aria-live="polite"></section>
+      </main>
+    </div>
 
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <p>预约</p>
-              <h2>到店预约</h2>
-            </div>
-          </div>
-          <div class="stack-list" id="bookingList"></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p>咨询</p>
-            <h2>定制咨询</h2>
-          </div>
-        </div>
-        <div class="stack-list" id="consultList"></div>
-      </section>
-    </main>
-
-    <div class="toast" id="adminToast" role="status"></div>
+    <div class="admin-toast" id="adminToast" role="status"></div>
     <script src="./admin.js"></script>
   </body>
 </html>

@@ -1,6 +1,7 @@
 verification-*.png
 .env*
 !.env.example
+node_modules/
 data/store.json
 data/store.json.tmp
 test-results/

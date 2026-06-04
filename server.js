@@ -6,12 +6,13 @@ const path = require("path");
 const { URL } = require("url");
 
 const rootDir = __dirname;
+loadLocalEnv();
+
 const dataDir = path.join(rootDir, "data");
 const dataFile = process.env.XIAODIAN_DATA_FILE || path.join(dataDir, "store.json");
 const seedFile = path.join(dataDir, "store.seed.json");
 const port = Number(process.env.PORT || 3000);
-
-loadLocalEnv();
+let mysqlPool = null;
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -96,6 +97,400 @@ async function writeStore(store) {
   await fs.rename(tmpFile, dataFile);
 }
 
+function useMysql() {
+  return String(process.env.DB_TYPE || "").toLowerCase() === "mysql";
+}
+
+function jsonText(value, fallback = []) {
+  try {
+    return JSON.stringify(value ?? fallback);
+  } catch {
+    return JSON.stringify(fallback);
+  }
+}
+
+function parseJsonText(value, fallback = []) {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined || value === "") return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function mysqlConfig() {
+  return {
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT || 3306),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    waitForConnections: true,
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT || 8000),
+    charset: "utf8mb4",
+  };
+}
+
+async function getMysqlPool() {
+  if (mysqlPool) return mysqlPool;
+  let mysql;
+  try {
+    mysql = require("mysql2/promise");
+  } catch {
+    throw new Error("缺少 MySQL 驱动，请先运行：npm install");
+  }
+
+  const config = mysqlConfig();
+  ["host", "database", "user"].forEach((key) => {
+    if (!config[key]) throw new Error(`缺少数据库配置：DB_${key.toUpperCase()}`);
+  });
+  mysqlPool = mysql.createPool(config);
+  await ensureMysqlSchema(mysqlPool);
+  return mysqlPool;
+}
+
+async function ensureMysqlSchema(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS store_info (
+      id INT PRIMARY KEY,
+      name VARCHAR(120) NOT NULL DEFAULT '',
+      address VARCHAR(255) NOT NULL DEFAULT '',
+      phone VARCHAR(80) NOT NULL DEFAULT '',
+      hours VARCHAR(120) NOT NULL DEFAULT '',
+      longitude DECIMAL(10,6) NULL,
+      latitude DECIMAL(10,6) NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id VARCHAR(80) PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      type VARCHAR(80) NOT NULL DEFAULT '',
+      price DECIMAL(10,2) NOT NULL DEFAULT 0,
+      tags LONGTEXT NULL,
+      material VARCHAR(255) NOT NULL DEFAULT '',
+      specs VARCHAR(255) NOT NULL DEFAULT '',
+      cycle VARCHAR(120) NOT NULL DEFAULT '',
+      stock VARCHAR(120) NOT NULL DEFAULT '',
+      tone VARCHAR(255) NOT NULL DEFAULT '',
+      care VARCHAR(255) NOT NULL DEFAULT '',
+      story TEXT NULL,
+      thumb_x VARCHAR(20) NOT NULL DEFAULT '50%',
+      thumb_y VARCHAR(20) NOT NULL DEFAULT '58%',
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS cases (
+      id VARCHAR(80) PRIMARY KEY,
+      title VARCHAR(160) NOT NULL,
+      type VARCHAR(80) NOT NULL DEFAULT '',
+      scene TEXT NULL,
+      summary TEXT NULL,
+      result TEXT NULL,
+      product_ids LONGTEXT NULL,
+      thumb_x VARCHAR(20) NOT NULL DEFAULT '50%',
+      thumb_y VARCHAR(20) NOT NULL DEFAULT '50%',
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id VARCHAR(80) PRIMARY KEY,
+      status VARCHAR(40) NOT NULL DEFAULT '',
+      product_name VARCHAR(160) NOT NULL DEFAULT '',
+      product_id VARCHAR(80) NOT NULL DEFAULT '',
+      price DECIMAL(10,2) NOT NULL DEFAULT 0,
+      quantity INT NOT NULL DEFAULT 1,
+      spec VARCHAR(255) NOT NULL DEFAULT '',
+      order_no VARCHAR(80) NOT NULL DEFAULT '',
+      logistics_no VARCHAR(120) NOT NULL DEFAULT '',
+      carrier VARCHAR(120) NOT NULL DEFAULT '',
+      created_at_text VARCHAR(40) NOT NULL DEFAULT '',
+      paid_at VARCHAR(80) NOT NULL DEFAULT '',
+      receiver VARCHAR(160) NOT NULL DEFAULT '',
+      address VARCHAR(255) NOT NULL DEFAULT '',
+      current_node VARCHAR(255) NOT NULL DEFAULT '',
+      logistics LONGTEXT NULL,
+      action VARCHAR(40) NOT NULL DEFAULT '',
+      primary_order TINYINT(1) NOT NULL DEFAULT 0,
+      thumb_x VARCHAR(20) NOT NULL DEFAULT '50%',
+      thumb_y VARCHAR(20) NOT NULL DEFAULT '58%',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY idx_order_no (order_no)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bookings (
+      id VARCHAR(80) PRIMARY KEY,
+      type VARCHAR(80) NOT NULL DEFAULT '',
+      time_text VARCHAR(120) NOT NULL DEFAULT '',
+      note TEXT NULL,
+      status VARCHAR(40) NOT NULL DEFAULT '',
+      created_at_text VARCHAR(40) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS consultations (
+      id VARCHAR(80) PRIMARY KEY,
+      product_id VARCHAR(80) NOT NULL DEFAULT '',
+      topic VARCHAR(120) NOT NULL DEFAULT '',
+      message TEXT NULL,
+      contact VARCHAR(160) NOT NULL DEFAULT '',
+      status VARCHAR(40) NOT NULL DEFAULT '',
+      created_at_text VARCHAR(40) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+
+  await pool.query(
+    "INSERT IGNORE INTO store_info (id, name, address, phone, hours, longitude, latitude) VALUES (1, '', '', '', '', NULL, NULL)"
+  );
+}
+
+async function readMysqlStore() {
+  const pool = await getMysqlPool();
+  const [[storeInfoRow]] = await pool.query("SELECT * FROM store_info WHERE id = 1 LIMIT 1");
+  const [productRows] = await pool.query("SELECT * FROM products ORDER BY created_at DESC");
+  const [caseRows] = await pool.query("SELECT * FROM cases ORDER BY created_at DESC");
+  const [orderRows] = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
+  const [bookingRows] = await pool.query("SELECT * FROM bookings ORDER BY created_at DESC");
+  const [consultRows] = await pool.query("SELECT * FROM consultations ORDER BY created_at DESC");
+
+  return {
+    storeInfo: {
+      name: storeInfoRow?.name || "",
+      address: storeInfoRow?.address || "",
+      phone: storeInfoRow?.phone || "",
+      hours: storeInfoRow?.hours || "",
+      longitude: Number(storeInfoRow?.longitude) || 0,
+      latitude: Number(storeInfoRow?.latitude) || 0,
+    },
+    products: productRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      price: Number(row.price) || 0,
+      tags: parseJsonText(row.tags),
+      material: row.material,
+      specs: row.specs,
+      cycle: row.cycle,
+      stock: row.stock,
+      tone: row.tone,
+      care: row.care,
+      story: row.story || "",
+      thumbX: row.thumb_x,
+      thumbY: row.thumb_y,
+      active: Boolean(row.active),
+    })),
+    cases: caseRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      type: row.type,
+      scene: row.scene || "",
+      summary: row.summary || "",
+      result: row.result || "",
+      productIds: parseJsonText(row.product_ids),
+      thumbX: row.thumb_x,
+      thumbY: row.thumb_y,
+      active: Boolean(row.active),
+    })),
+    orders: orderRows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      productName: row.product_name,
+      productId: row.product_id,
+      price: Number(row.price) || 0,
+      quantity: Number(row.quantity) || 1,
+      spec: row.spec,
+      orderNo: row.order_no,
+      logisticsNo: row.logistics_no,
+      carrier: row.carrier,
+      createdAt: row.created_at_text,
+      paidAt: row.paid_at,
+      receiver: row.receiver,
+      address: row.address,
+      currentNode: row.current_node,
+      logistics: parseJsonText(row.logistics),
+      action: row.action,
+      primary: Boolean(row.primary_order),
+      thumbX: row.thumb_x,
+      thumbY: row.thumb_y,
+    })),
+    bookings: bookingRows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      time: row.time_text,
+      note: row.note || "",
+      status: row.status,
+      createdAt: row.created_at_text,
+    })),
+    consultations: consultRows.map((row) => ({
+      id: row.id,
+      productId: row.product_id,
+      topic: row.topic,
+      message: row.message || "",
+      contact: row.contact,
+      status: row.status,
+      createdAt: row.created_at_text,
+    })),
+  };
+}
+
+async function replaceTable(connection, table, rows, sql, mapper) {
+  await connection.query(`DELETE FROM ${table}`);
+  for (const row of rows) {
+    await connection.query(sql, mapper(row));
+  }
+}
+
+async function writeMysqlStore(store) {
+  const pool = await getMysqlPool();
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query(
+      `INSERT INTO store_info (id, name, address, phone, hours, longitude, latitude)
+       VALUES (1, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE name = VALUES(name), address = VALUES(address), phone = VALUES(phone), hours = VALUES(hours), longitude = VALUES(longitude), latitude = VALUES(latitude)`,
+      [
+        store.storeInfo?.name || "",
+        store.storeInfo?.address || "",
+        store.storeInfo?.phone || "",
+        store.storeInfo?.hours || "",
+        Number(store.storeInfo?.longitude) || null,
+        Number(store.storeInfo?.latitude) || null,
+      ]
+    );
+
+    await replaceTable(
+      connection,
+      "products",
+      store.products || [],
+      `INSERT INTO products (id, name, type, price, tags, material, specs, cycle, stock, tone, care, story, thumb_x, thumb_y, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (product) => [
+        product.id,
+        product.name,
+        product.type,
+        price(product.price),
+        jsonText(product.tags),
+        product.material || "",
+        product.specs || "",
+        product.cycle || "",
+        product.stock || "",
+        product.tone || "",
+        product.care || "",
+        product.story || "",
+        product.thumbX || "50%",
+        product.thumbY || "58%",
+        product.active === false ? 0 : 1,
+      ]
+    );
+
+    await replaceTable(
+      connection,
+      "cases",
+      store.cases || [],
+      `INSERT INTO cases (id, title, type, scene, summary, result, product_ids, thumb_x, thumb_y, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (caseItem) => [
+        caseItem.id,
+        caseItem.title,
+        caseItem.type || "",
+        caseItem.scene || "",
+        caseItem.summary || "",
+        caseItem.result || "",
+        jsonText(caseItem.productIds),
+        caseItem.thumbX || "50%",
+        caseItem.thumbY || "50%",
+        caseItem.active === false ? 0 : 1,
+      ]
+    );
+
+    await replaceTable(
+      connection,
+      "orders",
+      store.orders || [],
+      `INSERT INTO orders (id, status, product_name, product_id, price, quantity, spec, order_no, logistics_no, carrier, created_at_text, paid_at, receiver, address, current_node, logistics, action, primary_order, thumb_x, thumb_y)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (order) => [
+        order.id,
+        order.status || "",
+        order.productName || "",
+        order.productId || "",
+        price(order.price),
+        Number(order.quantity) || 1,
+        order.spec || "",
+        order.orderNo || "",
+        order.logisticsNo || "",
+        order.carrier || "",
+        order.createdAt || "",
+        order.paidAt || "",
+        order.receiver || "",
+        order.address || "",
+        order.currentNode || "",
+        jsonText(order.logistics),
+        order.action || "",
+        order.primary ? 1 : 0,
+        order.thumbX || "50%",
+        order.thumbY || "58%",
+      ]
+    );
+
+    await replaceTable(
+      connection,
+      "bookings",
+      store.bookings || [],
+      "INSERT INTO bookings (id, type, time_text, note, status, created_at_text) VALUES (?, ?, ?, ?, ?, ?)",
+      (booking) => [booking.id, booking.type || "", booking.time || "", booking.note || "", booking.status || "", booking.createdAt || ""]
+    );
+
+    await replaceTable(
+      connection,
+      "consultations",
+      store.consultations || [],
+      "INSERT INTO consultations (id, product_id, topic, message, contact, status, created_at_text) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      (consult) => [consult.id, consult.productId || "", consult.topic || "", consult.message || "", consult.contact || "", consult.status || "", consult.createdAt || ""]
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+const readJsonStore = readStore;
+const writeJsonStore = writeStore;
+
+readStore = async function readConfiguredStore() {
+  if (useMysql()) return readMysqlStore();
+  return readJsonStore();
+};
+
+writeStore = async function writeConfiguredStore(store) {
+  if (useMysql()) return writeMysqlStore(store);
+  return writeJsonStore(store);
+};
+
 async function readBody(request) {
   const chunks = [];
   for await (const chunk of request) {
@@ -171,6 +566,28 @@ function normalizeProduct(input, existing = {}) {
     story: text(input.story, existing.story || "这件商品还没有填写介绍。"),
     thumbX: text(input.thumbX, existing.thumbX || "50%"),
     thumbY: text(input.thumbY, existing.thumbY || "58%"),
+    active: input.active === false || input.active === "false" ? false : true,
+  };
+}
+
+function normalizeCase(input, existing = {}) {
+  const title = text(input.title, existing.title || "未命名案例");
+  const id = text(input.id, existing.id || createId("case"))
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return {
+    id: id || existing.id || createId("case"),
+    title,
+    type: text(input.type, existing.type || "案例"),
+    scene: text(input.scene, existing.scene || "待补充场景"),
+    summary: text(input.summary, existing.summary || "待补充摘要"),
+    result: text(input.result, existing.result || "待补充结果"),
+    productIds: list(input.productIds ?? existing.productIds),
+    thumbX: text(input.thumbX, existing.thumbX || "50%"),
+    thumbY: text(input.thumbY, existing.thumbY || "50%"),
     active: input.active === false || input.active === "false" ? false : true,
   };
 }
@@ -644,12 +1061,39 @@ async function handleAdminApi(request, response, store, id, action) {
     return;
   }
 
+  if (request.method === "POST" && id === "cases") {
+    const body = await readBody(request);
+    const caseItem = normalizeCase(body);
+    if (store.cases.some((item) => item.id === caseItem.id)) {
+      return sendError(response, 409, "案例 ID 已存在");
+    }
+    store.cases.unshift(caseItem);
+    await writeStore(store);
+    sendJson(response, 201, caseItem);
+    return;
+  }
+
+  if (request.method === "PUT" && id === "cases" && action) {
+    const body = await readBody(request);
+    const index = store.cases.findIndex((item) => item.id === action);
+    if (index === -1) return sendError(response, 404, "案例不存在");
+    store.cases[index] = normalizeCase({ ...body, id: action }, store.cases[index]);
+    await writeStore(store);
+    sendJson(response, 200, store.cases[index]);
+    return;
+  }
+
   if (request.method === "PATCH" && id === "orders" && action) {
     const body = await readBody(request);
     const order = store.orders.find((item) => item.id === action);
     if (!order) return sendError(response, 404, "订单不存在");
     order.status = text(body.status, order.status);
     order.currentNode = text(body.currentNode, order.currentNode);
+    order.carrier = text(body.carrier, order.carrier);
+    order.logisticsNo = text(body.logisticsNo, order.logisticsNo);
+    if (body.logisticsNode) {
+      order.logistics = [text(body.logisticsNode), ...(Array.isArray(order.logistics) ? order.logistics : [])].filter(Boolean);
+    }
     order.action = order.status === "待确认" ? "查看详情" : "查看物流";
     await writeStore(store);
     sendJson(response, 200, order);
