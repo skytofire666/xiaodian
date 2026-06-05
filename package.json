@@ -5,7 +5,8 @@
   "description": "果壳铃手作铺第一版线上店铺原型",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "db:setup": "node scripts/setup-database.js"
   },
   "dependencies": {
     "mysql2": "^3.14.1"

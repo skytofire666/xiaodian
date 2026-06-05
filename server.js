@@ -4,6 +4,7 @@ const fs = require("fs/promises");
 const http = require("http");
 const path = require("path");
 const { URL } = require("url");
+const { ensureBusinessMysqlSchema } = require("./db/schema");
 
 const rootDir = __dirname;
 loadLocalEnv();
@@ -261,6 +262,8 @@ async function ensureMysqlSchema(pool) {
   await pool.query(
     "INSERT IGNORE INTO store_info (id, name, address, phone, hours, longitude, latitude) VALUES (1, '', '', '', '', NULL, NULL)"
   );
+
+  await ensureBusinessMysqlSchema(pool);
 }
 
 async function readMysqlStore() {

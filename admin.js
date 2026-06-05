@@ -44,54 +44,19 @@ const navItems = [
 
 const data = {
   stats: [
-    { label: "今日订单", value: "37" },
-    { label: "今日销售额", value: "¥48,600" },
-    { label: "新增会员", value: "52" },
-    { label: "待跟进线索", value: "14", tone: "warm" },
+    { label: "订单总数", value: "0" },
+    { label: "订单金额", value: "¥0" },
+    { label: "上架产品", value: "0" },
+    { label: "待处理事项", value: "0", tone: "warm" },
   ],
-  dashboardOrders: [
-    { no: "No.20260603...", member: "王**", amount: "¥1,280", status: "待发货", action: "发货" },
-    { no: "No.20260603...", member: "李**", amount: "¥860", status: "已发货", action: "详情" },
-    { no: "No.20260602...", member: "张**", amount: "¥3,400", status: "已完成", action: "详情" },
-    { no: "No.20260602...", member: "陈**", amount: "¥520", status: "退款中", action: "处理" },
-  ],
-  products: [
-    { product: "核桃平安铃", category: "车挂", price: "¥68", stock: "12", status: "在售", action: "编辑" },
-    { product: "苔影流苏包挂", category: "包挂", price: "¥56", stock: "可定制", status: "在售", action: "编辑" },
-    { product: "青藤车挂铃", category: "车挂", price: "¥88", stock: "6", status: "在售", action: "编辑" },
-    { product: "山莓祝福礼盒", category: "礼盒", price: "¥128", stock: "9", status: "下架", action: "编辑" },
-  ],
-  cases: [
-    { caseName: "新车平安礼", tag: "车挂 · 礼盒", store: "XX 店", status: "精选", action: "编辑" },
-    { caseName: "帆布包森系搭配", tag: "包挂", store: "YY 店", status: "已发布", action: "编辑" },
-    { caseName: "生日祝福礼盒", tag: "礼盒", store: "XX 店", status: "草稿", action: "编辑" },
-  ],
-  stores: [
-    { store: "XX 旗舰店", address: "XX 市 XX 路 88 号", phone: "02F-****", status: "营业", action: "编辑" },
-    { store: "YY 体验店", address: "YY 市 YY 街 12 号", phone: "010-****", status: "营业", action: "编辑" },
-    { store: "ZZ 店", address: "ZZ 市 ZZ 路 9 号", phone: "020-****", status: "筹备中", action: "编辑" },
-  ],
-  orders: [
-    { no: "No.20260603...", member: "王**", amount: "¥1,280", source: "小程序", status: "待发货", action: "发货" },
-    { no: "No.20260603...", member: "李**", amount: "¥860", source: "H5", status: "已发货", action: "详情" },
-    { no: "No.20260602...", member: "何**", amount: "¥520", source: "小程序", status: "退款中", action: "处理" },
-    { no: "No.20260602...", member: "张**", amount: "¥3,400", source: "门店", status: "已完成", action: "详情" },
-  ],
-  members: [
-    { member: "顾客 A", phone: "138****", level: "黄金", points: "1,280", spend: "¥2,600", action: "详情" },
-    { member: "顾客 B", phone: "139****", level: "白银", points: "320", spend: "¥1,200", action: "详情" },
-    { member: "顾客 C", phone: "137****", level: "普通", points: "50", spend: "¥0", action: "详情" },
-  ],
-  leads: [
-    { customer: "张**", phone: "138****", source: "案例预约", store: "XX 店", status: "跟进中", action: "跟进" },
-    { customer: "刘**", phone: "139****", source: "在线客服", store: "YY 店", status: "待跟进", action: "跟进" },
-    { customer: "赵**", phone: "137****", source: "案例预约", store: "XX 店", status: "已成交", action: "查看" },
-  ],
-  coupons: [
-    { coupon: "满 100 减 10", type: "满减", scope: "¥100 / 满 100", used: "320 / 180", valid: "-06-30", status: "进行中" },
-    { coupon: "新人 9 折", type: "折扣", scope: "9 折 / 正门店", used: "540 / 210", valid: "长期", status: "进行中" },
-    { coupon: "到店礼 ¥50", type: "无门槛", scope: "¥50", used: "100 / 0", valid: "未开始", status: "待生效" },
-  ],
+  dashboardOrders: [],
+  products: [],
+  cases: [],
+  stores: [],
+  orders: [],
+  members: [],
+  leads: [],
+  coupons: [],
 };
 
 const pageConfigs = {
@@ -101,7 +66,7 @@ const pageConfigs = {
     addLabel: "新增产品",
     filters: ["分类", "状态"],
     search: "搜索产品",
-    total: "共 128 条",
+    total: "共 0 条",
     columns: [
       { key: "product", label: "产品", type: "thumb" },
       { key: "category", label: "分类" },
@@ -118,7 +83,7 @@ const pageConfigs = {
     addLabel: "新增案例",
     filters: ["标签", "门店", "状态"],
     search: "搜索案例",
-    total: "共 64 条",
+    total: "共 0 条",
     columns: [
       { key: "caseName", label: "案例", type: "thumb" },
       { key: "tag", label: "标签" },
@@ -134,7 +99,7 @@ const pageConfigs = {
     addLabel: "新增门店",
     filters: ["城市", "状态"],
     search: "搜索门店",
-    total: "共 18 条",
+    total: "共 0 条",
     columns: [
       { key: "store", label: "门店" },
       { key: "address", label: "地址" },
@@ -149,7 +114,7 @@ const pageConfigs = {
     desc: "处理前台提交的订单，确认库存、支付方式和物流信息。",
     filters: ["日期", "来源"],
     search: "订单号 / 手机",
-    total: "共 1,204 条",
+    total: "共 0 条",
     tabKey: "orders",
     tabs: ["全部", "待确认", "待付款", "待发货", "待收货", "已完成", "退款"],
     columns: [
@@ -168,7 +133,7 @@ const pageConfigs = {
     addLabel: "导出",
     filters: ["等级", "标签"],
     search: "昵称 / 手机",
-    total: "共 3,960 条",
+    total: "共 0 条",
     columns: [
       { key: "member", label: "会员", type: "avatar" },
       { key: "phone", label: "手机" },
@@ -184,7 +149,7 @@ const pageConfigs = {
     desc: "汇总前台定制咨询和到店预约，方便门店跟进。",
     filters: ["门店", "来源"],
     search: "姓名 / 手机",
-    total: "共 248 条",
+    total: "共 0 条",
     tabKey: "leads",
     tabs: ["全部", "待跟进", "跟进中", "已成交", "已关闭"],
     columns: [
@@ -201,7 +166,7 @@ const pageConfigs = {
     title: "营销中心 / 优惠券",
     desc: "配置优惠券、到店活动、积分兑换等运营动作。",
     addLabel: "创建优惠券",
-    total: "共 12 条",
+    total: "共 0 条",
     tabKey: "marketing",
     tabs: ["优惠券", "活动", "签到", "积分商城 二期"],
     columns: [
@@ -238,108 +203,70 @@ const secondaryPages = {
     title: "首页 Banner / 运营位",
     desc: "管理首页首屏轮播、运营坑位和跳转目标。",
     columns: ["位置", "标题", "跳转", "状态", "操作"],
-    rows: [
-      ["Banner 01", "森系手作新款", "产品详情", "已上线", "编辑"],
-      ["运营位 A", "到店听铃音", "门店页", "已上线", "编辑"],
-      ["运营位 B", "礼盒定制", "案例列表", "待上线", "编辑"],
-    ],
+    rows: [],
   },
   recommend: {
     parent: "content",
     title: "推荐位",
     desc: "控制首页热门产品、精选案例和排序。",
     columns: ["推荐区域", "内容", "排序", "状态", "操作"],
-    rows: [
-      ["HOT PICKS", "核桃平安铃", "1", "已上线", "调整"],
-      ["真实搭配案例", "新车平安礼", "1", "已上线", "调整"],
-      ["门店推荐", "杭州工作室", "2", "待上线", "调整"],
-    ],
+    rows: [],
   },
   story: {
     parent: "content",
     title: "品牌故事 / 关于我们",
     desc: "维护品牌介绍、工艺说明和门店主理人内容。",
     columns: ["模块", "内容类型", "更新时间", "状态", "操作"],
-    rows: [
-      ["品牌故事", "图文", "2026-06-04", "已发布", "编辑"],
-      ["工艺说明", "图文", "2026-06-03", "已发布", "编辑"],
-      ["关于我们", "图文", "2026-06-01", "草稿", "编辑"],
-    ],
+    rows: [],
   },
   agreement: {
     parent: "content",
     title: "协议管理",
     desc: "维护用户协议、隐私政策和售后说明。",
     columns: ["协议", "版本", "更新时间", "状态", "操作"],
-    rows: [
-      ["用户协议", "v1.0", "2026-06-04", "已发布", "编辑"],
-      ["隐私政策", "v1.0", "2026-06-04", "已发布", "编辑"],
-      ["售后说明", "v0.8", "2026-06-02", "草稿", "编辑"],
-    ],
+    rows: [],
   },
   account: {
     parent: "settings",
     title: "账号与权限",
     desc: "配置后台角色、账号和数据权限范围。",
     columns: ["角色", "成员", "权限范围", "状态", "操作"],
-    rows: [
-      ["管理员", "2", "全部模块", "启用", "编辑"],
-      ["门店店员", "6", "订单 / 线索 / 门店", "启用", "编辑"],
-      ["运营", "3", "内容 / 营销 / 案例", "启用", "编辑"],
-    ],
+    rows: [],
   },
   pay: {
     parent: "settings",
     title: "支付配置",
     desc: "配置微信支付、小程序支付和退款规则。",
     columns: ["渠道", "商户号", "能力", "状态", "操作"],
-    rows: [
-      ["微信支付", "1900****", "支付 / 退款", "待配置", "配置"],
-      ["H5 支付", "1900****", "支付", "待配置", "配置"],
-    ],
+    rows: [],
   },
   logistics: {
     parent: "settings",
     title: "物流 / 运费模板",
     desc: "维护快递公司、物流单号规则和运费模板。",
     columns: ["模板", "快递公司", "计费规则", "状态", "操作"],
-    rows: [
-      ["江浙沪包邮", "圆通 / 顺丰", "满 99 包邮", "启用", "编辑"],
-      ["全国普通件", "圆通", "首重 8 元", "启用", "编辑"],
-      ["同城自提", "门店自提", "0 元", "启用", "编辑"],
-    ],
+    rows: [],
   },
   service: {
     parent: "settings",
     title: "客服配置",
     desc: "配置企业微信、电话和第三方客服入口。",
     columns: ["入口", "方式", "展示位置", "状态", "操作"],
-    rows: [
-      ["在线客服", "企业微信", "首页 / 商品详情", "启用", "编辑"],
-      ["门店电话", "0571-****", "门店页", "启用", "编辑"],
-    ],
+    rows: [],
   },
   logs: {
     parent: "settings",
     title: "操作日志",
     desc: "查看后台关键操作记录。",
     columns: ["时间", "账号", "动作", "对象", "结果"],
-    rows: [
-      ["2026-06-04 09:30", "admin", "编辑商品", "核桃平安铃", "成功"],
-      ["2026-06-04 09:12", "operator", "处理订单", "No.20260603...", "成功"],
-      ["2026-06-03 18:44", "admin", "发布内容", "首页 Banner", "成功"],
-    ],
+    rows: [],
   },
   basic: {
     parent: "settings",
     title: "基础信息",
     desc: "配置品牌名称、Logo、客服电话和营业信息。",
     columns: ["字段", "当前值", "更新时间", "状态", "操作"],
-    rows: [
-      ["品牌名", "果壳铃手作铺", "2026-06-04", "启用", "编辑"],
-      ["客服电话", "0571-****", "2026-06-03", "启用", "编辑"],
-      ["营业时间", "周二至周日 11:00-19:30", "2026-06-03", "启用", "编辑"],
-    ],
+    rows: [],
   },
 };
 
@@ -501,7 +428,8 @@ function applyBackendStore(store) {
   const products = Array.isArray(store.products) ? store.products.map(mapProduct) : [];
   const cases = Array.isArray(store.cases) ? store.cases.map(mapCase) : [];
   const orders = Array.isArray(store.orders) ? store.orders.map(mapOrder) : [];
-  const stores = [mapStore(store.storeInfo)];
+  const hasStoreInfo = store.storeInfo && ["name", "address", "phone", "hours"].some((key) => textValue(store.storeInfo[key]));
+  const stores = hasStoreInfo ? [mapStore(store.storeInfo)] : [];
   const bookings = Array.isArray(store.bookings) ? store.bookings.map(mapBooking) : [];
   const consultations = Array.isArray(store.consultations) ? store.consultations.map(mapConsultation) : [];
   const leads = [...consultations, ...bookings];
@@ -865,10 +793,10 @@ function renderProductEditor() {
         <div class="detail-card">
           <input type="hidden" name="id" value="${escapeHtml(product.id || "")}" />
           <div class="form-grid">
-            ${renderField("产品名称", product.name || "雪人车挂", { name: "name" })}
-            ${renderField("价格", product.price || 68, { name: "price" })}
+            ${renderField("产品名称", product.name || "", { name: "name", placeholder: "输入产品名称" })}
+            ${renderField("价格", product.price || "", { name: "price", placeholder: "输入售价" })}
             ${renderSelectField("分类", ["车挂", "包挂", "礼盒", "配件", "果壳铃", "定制"], product.type || "车挂", { name: "type" })}
-            ${renderSelectField("品牌", ["果壳铃", "青藤手作", "山莓礼盒"], "果壳铃")}
+            ${renderSelectField("品牌", ["果壳铃"], "果壳铃")}
           </div>
           <div class="field-block">
             <span>图集</span>
@@ -885,12 +813,11 @@ function renderProductEditor() {
           <table class="mini-table">
             <thead><tr><th>规格</th><th>价格</th><th>库存</th></tr></thead>
             <tbody>
-              <tr><td>青藤</td><td>¥68</td><td>99</td></tr>
-              <tr><td>山莓</td><td>¥78</td><td>32</td></tr>
+              <tr><td colspan="3"><div class="empty-state">暂无规格</div></td></tr>
             </tbody>
           </table>
           <button class="line-button" type="button" data-add-action="添加规格">+ 添加规格</button>
-          ${renderField("库存", product.stock || "99", { name: "stock", wide: true })}
+          ${renderField("库存", product.stock || "", { name: "stock", wide: true, placeholder: "输入库存" })}
           ${renderField("关键词", Array.isArray(product.tags) ? product.tags.join(",") : "", { name: "tags", wide: true })}
           <div class="side-row"><span>上架状态</span>${renderSwitch(isActive)}</div>
         </aside>
@@ -909,8 +836,8 @@ function renderCaseEditor() {
         <div class="detail-card">
           <input type="hidden" name="id" value="${escapeHtml(caseItem.id || "")}" />
           <div class="form-grid">
-            ${renderField("案例标题", caseItem.title || "雪人车挂", { name: "title" })}
-            ${renderField("场景", caseItem.scene || "新车礼物", { name: "scene" })}
+            ${renderField("案例标题", caseItem.title || "", { name: "title", placeholder: "输入案例标题" })}
+            ${renderField("场景", caseItem.scene || "", { name: "scene", placeholder: "输入使用场景" })}
           </div>
           <div class="field-block">
             <span>封面图</span>
@@ -934,19 +861,24 @@ function renderCaseEditor() {
 function renderOrderDetail() {
   setTitle("订单管理 / 订单详情", "订单管理 / 第二层");
   const order = selectedRaw("orders");
+  const hasOrder = Boolean(order.id || order.orderNo);
   return `
     <section class="detail-page">
       <div class="detail-head">
         <h2>订单管理 / 订单详情</h2>
-        ${renderStatus(order.status || "待发货")}
+        ${renderStatus(order.status || "待确认")}
       </div>
       <div class="detail-grid">
         <div class="detail-card">
           <h3>商品明细</h3>
-          <table class="mini-table order-lines">
-            <thead><tr><th>商品</th><th>数量</th><th>小计</th></tr></thead>
-            <tbody><tr><td>${escapeHtml(order.productName || "雪人车挂")}</td><td>×${escapeHtml(order.quantity || 1)}</td><td>¥${escapeHtml(order.price || 0)}</td></tr></tbody>
-          </table>
+          ${
+            hasOrder
+              ? `<table class="mini-table order-lines">
+                  <thead><tr><th>商品</th><th>数量</th><th>小计</th></tr></thead>
+                  <tbody><tr><td>${escapeHtml(order.productName || "未命名商品")}</td><td>×${escapeHtml(order.quantity || 1)}</td><td>¥${escapeHtml(order.price || 0)}</td></tr></tbody>
+                </table>`
+              : `<div class="empty-state">暂无订单商品</div>`
+          }
           <div class="price-list">
             <p><span>优惠券 / 积分抵扣</span><strong>-¥0</strong></p>
             <p><span>运费</span><strong>¥0</strong></p>
@@ -956,10 +888,10 @@ function renderOrderDetail() {
         </div>
         <aside class="detail-card side-card">
           <h3>订单信息</h3>
-          <p class="muted-line">订单号：${escapeHtml(order.orderNo || "No.2026...")}</p>
-          <p class="muted-line">来源：小程序</p>
+          <p class="muted-line">订单号：${escapeHtml(order.orderNo || "待生成")}</p>
+          <p class="muted-line">来源：${escapeHtml(order.source || "前台提交")}</p>
           <p class="muted-line">支付：${escapeHtml(order.paidAt || "待确认")}</p>
-          ${renderSelectField("快递公司", ["圆通公司", "顺丰速运", "中通快递"], order.carrier || "圆通公司", { name: "carrier", wide: true })}
+          ${renderSelectField("快递公司", ["待选择", "圆通公司", "顺丰速运", "中通快递"], order.carrier || "待选择", { name: "carrier", wide: true })}
           ${renderField("运单号", order.logisticsNo || "", { name: "logisticsNo", wide: true, placeholder: "填写物流单号" })}
           <button class="full-button" type="button" data-save-action="确认发货">确认发货</button>
         </aside>
@@ -977,9 +909,9 @@ function renderStoreEditor() {
       <div class="detail-grid">
         <div class="detail-card">
           <div class="form-grid">
-            ${renderField("门店名称", store.name || store.store || "输入", { name: "name" })}
-            ${renderField("电话", store.phone || "输入", { name: "phone" })}
-            ${renderField("营业时间", store.hours || "10:00 - 22:00", { name: "hours" })}
+            ${renderField("门店名称", store.name || store.store || "", { name: "name", placeholder: "输入门店名称" })}
+            ${renderField("电话", store.phone || "", { name: "phone", placeholder: "输入联系电话" })}
+            ${renderField("营业时间", store.hours || "", { name: "hours", placeholder: "例如 10:00 - 22:00" })}
             ${renderField("地址（地图选点）", store.address || "", { name: "address", wide: true, placeholder: "输入门店地址" })}
             ${renderField("经度", store.longitude || "", { name: "longitude", placeholder: "例如 120.127000" })}
             ${renderField("纬度", store.latitude || "", { name: "latitude", placeholder: "例如 30.245000" })}
@@ -1002,6 +934,7 @@ function renderStoreEditor() {
 
 function renderMemberDetail() {
   setTitle("会员管理 / 会员详情", "会员管理 / 第二层");
+  const member = selectedRow("members");
   return `
     <section class="detail-page">
       <div class="detail-head"><h2>会员管理 / 会员详情</h2></div>
@@ -1009,7 +942,7 @@ function renderMemberDetail() {
         <div class="detail-card">
           <div class="member-profile">
             <span class="mini-avatar is-large"></span>
-            <div><h3>会员昵称</h3><p>手机号：138**** · 黄金会员</p></div>
+            <div><h3>${escapeHtml(member.member || "暂无会员")}</h3><p>手机号：${escapeHtml(member.phone || "暂无")} · ${escapeHtml(member.level || "暂无等级")}</p></div>
           </div>
           <h3>订单历史</h3>
           ${renderTable(
@@ -1018,17 +951,13 @@ function renderMemberDetail() {
               { key: "amount", label: "金额" },
               { key: "status", label: "状态", type: "status" },
             ],
-            [
-              { no: "No.2026...", amount: "¥1,280", status: "已完成" },
-              { no: "No.2026...", amount: "¥860", status: "已发货" },
-            ]
+            []
           )}
         </div>
         <aside class="detail-card side-card">
-          <div class="points-card"><span>积分</span><strong>1,280</strong><button type="button">手动调整</button></div>
+          <div class="points-card"><span>积分</span><strong>${escapeHtml(member.points || "0")}</strong><button type="button">手动调整</button></div>
           <h3>积分流水</h3>
-          <p class="flow-line is-plus">消费获得 <span>+120</span></p>
-          <p class="flow-line is-minus">兑换优惠 <span>-50</span></p>
+          <div class="empty-state">暂无积分流水</div>
           <button class="tag-button is-active" type="button">优惠券</button>
         </aside>
       </div>
@@ -1144,12 +1073,7 @@ function renderAccountRoles() {
     { key: "status", label: "状态", type: "status" },
     { key: "action", label: "操作", type: "action" },
   ];
-  const rows = [
-    { role: "admin", name: "超级管理员", scope: "全部", status: "启用", action: "编辑" },
-    { role: "yunyin", name: "运营 / 内容", scope: "全部", status: "启用", action: "编辑" },
-    { role: "store01", name: "门店管理员", scope: "XX 店", status: "启用", action: "编辑" },
-    { role: "finance", name: "财务", scope: "全部", status: "停用", action: "编辑" },
-  ];
+  const rows = [];
   return `
     <section class="detail-page">
       <div class="detail-head">
@@ -1158,7 +1082,7 @@ function renderAccountRoles() {
       </div>
       <div class="detail-card">
         ${renderTable(columns, rows)}
-        <p class="hint-line">角色权限可细分到一级模块、二级页面和操作按钮，后续接接口后保存到权限表。</p>
+        <p class="hint-line">账号和权限表已经建好，接入登录接口后这里会显示真实后台账号。</p>
       </div>
     </section>
   `;
@@ -1174,7 +1098,7 @@ function renderFallbackSecondary(id) {
   const parentLabel = navItems.find((item) => item.id === page.parent)?.label || "品牌后台";
   setTitle(page.title, `${parentLabel} / 第二层`);
   const columns = page.columns.map((label, index) => ({ key: `col${index}`, label, type: label === "状态" ? "status" : label === "操作" ? "action" : "" }));
-  const rows = page.rows.map((row) => Object.fromEntries(row.map((value, index) => [`col${index}`, value])));
+  const rows = [];
 
   return `
     <section class="secondary-panel">
