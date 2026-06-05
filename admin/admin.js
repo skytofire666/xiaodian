@@ -466,6 +466,7 @@ function applyBackendStore(store) {
 
 async function loadBackendData({ silent = false } = {}) {
   state.backend.loading = true;
+  document.body.classList.add("is-loading-data");
   try {
     const store = await apiRequest("/admin/data");
     state.backend = {
@@ -484,6 +485,8 @@ async function loadBackendData({ silent = false } = {}) {
       error: error.message,
     };
     if (!silent) showToast(`后端未连接：${error.message}`);
+  } finally {
+    document.body.classList.remove("is-loading-data");
   }
   render();
 }
@@ -518,7 +521,7 @@ function renderNav() {
   nodes.nav.innerHTML = navItems
     .map(
       (item) => `
-        <button class="nav-button ${item.id === state.section ? "is-active" : ""}" type="button" data-section="${item.id}">
+        <button class="nav-button ${item.id === state.section ? "is-active" : ""}" type="button" data-section="${item.id}" aria-current="${item.id === state.section ? "page" : "false"}">
           ${icon(item.icon)}
           <span>${item.label}</span>
         </button>
@@ -527,9 +530,18 @@ function renderNav() {
     .join("");
 }
 
-function setTitle(title, crumb = "品牌后台") {
+function setTitle(title, crumb = "运营后台") {
   nodes.title.textContent = title;
   nodes.crumb.textContent = crumb;
+}
+
+function renderAdminEmpty(title = "暂无真实数据", text = "录入或保存后会在这里显示。") {
+  return `
+    <div class="empty-state">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(text)}</span>
+    </div>
+  `;
 }
 
 function renderTable(columns, rows) {
@@ -551,7 +563,7 @@ function renderTable(columns, rows) {
                   `
                 )
                 .join("")
-            : `<tr><td colspan="${emptyColspan}"><div class="empty-state">没有匹配的数据</div></td></tr>`
+            : `<tr><td colspan="${emptyColspan}">${renderAdminEmpty()}</td></tr>`
         }
       </tbody>
     </table>
@@ -624,12 +636,13 @@ function renderSearch(placeholder) {
 }
 
 function renderFooter(total) {
+  const count = Number(String(total || "").match(/\d+/)?.[0] || 0);
   return `
     <div class="table-footer">
       <span>${escapeHtml(total || "共 0 条")}</span>
-      <button class="page-dot is-active" type="button">1</button>
-      <button class="page-dot" type="button">2</button>
-      <button class="page-dot" type="button">3</button>
+      <button class="page-dot is-active" type="button" ${count ? "" : "disabled"}>1</button>
+      <button class="page-dot" type="button" ${count > 20 ? "" : "disabled"}>2</button>
+      <button class="page-dot" type="button" ${count > 40 ? "" : "disabled"}>3</button>
     </div>
   `;
 }
@@ -706,6 +719,26 @@ function selectedRaw(section = state.section) {
   return selectedRow(section).raw || {};
 }
 
+function configKeyForDetail(detail = state.detail) {
+  const keys = {
+    "coupon-create": "marketing.couponDraft",
+    banner: "content.banner",
+    recommend: "content.recommend",
+    story: "content.story",
+    agreement: "content.agreement",
+    pay: "settings.payment",
+    logistics: "settings.logistics",
+    service: "settings.service",
+    basic: "settings.basic",
+  };
+  return keys[detail] || "";
+}
+
+function settingValues(keyOrDetail = state.detail) {
+  const key = keyOrDetail.includes(".") ? keyOrDetail : configKeyForDetail(keyOrDetail);
+  return state.backend.store?.settings?.[key] || {};
+}
+
 function collectDetailValues() {
   const values = {};
   document.querySelectorAll(".detail-page [name]").forEach((field) => {
@@ -779,7 +812,18 @@ async function saveCurrentDetail(actionLabel = "保存") {
     return;
   }
 
-  showToast(`「${actionLabel}」已预留，下一步可补对应接口`);
+  const configKey = configKeyForDetail();
+  if (configKey) {
+    await apiRequest(`/admin/settings/${encodeURIComponent(configKey)}`, {
+      method: "PATCH",
+      body: JSON.stringify(values),
+    });
+    await loadBackendData({ silent: true });
+    showToast("配置已保存到后端");
+    return;
+  }
+
+  showToast(`「${actionLabel}」已记录，当前模块暂无更多必填项`);
 }
 
 function renderProductEditor() {
@@ -862,6 +906,17 @@ function renderOrderDetail() {
   setTitle("订单管理 / 订单详情", "订单管理 / 第二层");
   const order = selectedRaw("orders");
   const hasOrder = Boolean(order.id || order.orderNo);
+  if (!hasOrder) {
+    return `
+      <section class="detail-page">
+        <div class="detail-head">
+          <h2>订单管理 / 订单详情</h2>
+          <button class="ghost-button" type="button" data-back>返回列表</button>
+        </div>
+        ${renderAdminEmpty("请选择一笔真实订单", "从订单列表点击详情或发货后，这里会显示商品、收货地址和物流信息。")}
+      </section>
+    `;
+  }
   return `
     <section class="detail-page">
       <div class="detail-head">
@@ -935,6 +990,18 @@ function renderStoreEditor() {
 function renderMemberDetail() {
   setTitle("会员管理 / 会员详情", "会员管理 / 第二层");
   const member = selectedRow("members");
+  const hasMember = Boolean(member.id || member.member || member.phone);
+  if (!hasMember) {
+    return `
+      <section class="detail-page">
+        <div class="detail-head">
+          <h2>会员管理 / 会员详情</h2>
+          <button class="ghost-button" type="button" data-back>返回列表</button>
+        </div>
+        ${renderAdminEmpty("请选择一位真实会员", "从会员列表点击详情后，这里会显示订单历史、积分和优惠券信息。")}
+      </section>
+    `;
+  }
   return `
     <section class="detail-page">
       <div class="detail-head"><h2>会员管理 / 会员详情</h2></div>
@@ -967,13 +1034,14 @@ function renderMemberDetail() {
 
 function renderCouponEditor() {
   setTitle("营销中心 / 创建优惠券", "营销中心 / 第二层");
+  const values = settingValues();
   return `
     <section class="detail-page">
       ${renderDetailHead("营销中心 / 创建优惠券", "保存")}
       <div class="detail-card">
         <div class="form-grid form-grid-three">
-          ${renderField("券名称", "")}
-          ${renderSelectField("适用范围", ["全部 / 指定分类", "指定产品", "指定门店"], "全部 / 指定分类")}
+          ${renderField("券名称", values.couponName || "", { name: "couponName" })}
+          ${renderSelectField("适用范围", ["全部 / 指定分类", "指定产品", "指定门店"], values.scope || "全部 / 指定分类", { name: "scope" })}
           <div class="form-field is-wide">
             <span>发放类型</span>
             <div class="segmented">
@@ -982,12 +1050,12 @@ function renderCouponEditor() {
               <button type="button">无门槛</button>
             </div>
           </div>
-          ${renderField("有效期", "", { type: "date" })}
-          ${renderSelectField("领取门槛", ["无门槛", "会员等级", "指定来源"], "无门槛")}
-          ${renderField("发放数量", "")}
-          ${renderField("面额", "¥")}
-          ${renderSelectField("领取门槛", ["消费满", "不限"], "消费满")}
-          ${renderField("发放数量", "限量")}
+          ${renderField("有效期", values.validTo || "", { name: "validTo", type: "date" })}
+          ${renderSelectField("领取门槛", ["无门槛", "会员等级", "指定来源"], values.receiveRule || "无门槛", { name: "receiveRule" })}
+          ${renderField("发放数量", values.totalCount || "", { name: "totalCount" })}
+          ${renderField("面额", values.amount || "", { name: "amount", placeholder: "¥" })}
+          ${renderSelectField("使用门槛", ["消费满", "不限"], values.useRule || "消费满", { name: "useRule" })}
+          ${renderField("限领数量", values.perUserLimit || "", { name: "perUserLimit", placeholder: "限量" })}
         </div>
       </div>
     </section>
@@ -996,32 +1064,215 @@ function renderCouponEditor() {
 
 function renderBannerEditor() {
   setTitle("内容管理 / 首页 Banner 与运营位", "内容管理 / 第二层");
+  const values = settingValues();
   return `
     <section class="detail-page">
       <div class="detail-head">
         <h2>内容管理 / 首页 Banner 与运营位</h2>
-        <button class="primary-button" type="button" data-add-action="新增 Banner">+ 新增</button>
+        <div class="row-actions">
+          <button class="ghost-button" type="button" data-back>返回</button>
+          <button class="primary-button" type="button" data-save-action="保存配置">保存配置</button>
+        </div>
       </div>
       <div class="detail-card">
         <h3>Banner（可拖动排序）</h3>
         <div class="banner-list">
-          ${["森系手作 · 新店扩展", "端午特惠 · 晒包活动"].map(
-            (title, index) => `
-              <div class="banner-row">
-                <span class="drag-dot">⋮⋮</span>
-                <span class="thumb-box is-wide-thumb"></span>
-                <strong>Banner ${index + 1} 标题 · ${title}</strong>
-                <small>${index === 0 ? "投放中" : "未开始"}</small>
-                ${renderSwitch(index === 0)}
-                <button class="icon-button" type="button" data-add-action="编辑 Banner">✎</button>
-              </div>
-            `
-          ).join("")}
+          ${renderAdminEmpty("暂无 Banner", "点击新增后配置首页轮播图、运营位和跳转链接。")}
         </div>
         <div class="form-grid">
-          ${renderField("轮播广告位", "首页第一小品")}
-          ${renderField("精选案例位", "首页第三小品")}
+          ${renderField("轮播广告位", values.heroSlot || "", { name: "heroSlot", placeholder: "例如：首页首屏轮播" })}
+          ${renderField("精选案例位", values.caseSlot || "", { name: "caseSlot", placeholder: "例如：首页案例区" })}
         </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRecommendConfig() {
+  setTitle("内容管理 / 推荐位", "内容管理 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("内容管理 / 推荐位", "保存排序")}
+      <div class="config-grid">
+        <div class="detail-card">
+          <h3>首页热门产品</h3>
+          ${renderAdminEmpty("暂无推荐产品", "商品录入后，可以在这里选择首页展示顺序。")}
+          ${renderField("产品 ID 排序", values.productIds || "", { name: "productIds", placeholder: "用逗号分隔产品 ID" })}
+          <button class="line-button" type="button" data-section-shortcut="products">去产品管理</button>
+        </div>
+        <div class="detail-card">
+          <h3>真实搭配案例</h3>
+          ${renderAdminEmpty("暂无推荐案例", "案例录入后，可以在这里控制首页露出位置。")}
+          ${renderField("案例 ID 排序", values.caseIds || "", { name: "caseIds", placeholder: "用逗号分隔案例 ID" })}
+          <button class="line-button" type="button" data-section-shortcut="cases">去案例管理</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderStoryConfig() {
+  setTitle("内容管理 / 品牌故事", "内容管理 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("内容管理 / 品牌故事", "保存内容")}
+      <div class="detail-grid">
+        <div class="detail-card">
+          <div class="form-grid">
+            ${renderField("品牌标题", values.brandTitle || "", { name: "brandTitle", placeholder: "例如：果壳铃手作铺" })}
+            ${renderField("主理人", values.ownerName || "", { name: "ownerName", placeholder: "填写展示姓名" })}
+            ${renderRichEditor("品牌介绍", "介绍品牌来源、手作工艺和门店故事。", { name: "brandStory", value: values.brandStory || "" })}
+            ${renderRichEditor("保养说明", "填写材质保养、使用注意事项和售后边界。", { name: "careGuide", value: values.careGuide || "" })}
+          </div>
+        </div>
+        <aside class="detail-card side-card">
+          <h3>展示位置</h3>
+          <div class="side-row"><span>我的页面品牌入口</span>${renderSwitch(false)}</div>
+          <div class="side-row"><span>商品详情工艺说明</span>${renderSwitch(false)}</div>
+          <div class="side-row"><span>门店页品牌介绍</span>${renderSwitch(false)}</div>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function renderAgreementConfig() {
+  setTitle("内容管理 / 协议管理", "内容管理 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("内容管理 / 协议管理", "保存协议")}
+      <div class="detail-card">
+        <div class="config-tabs">
+          <button class="tag-button is-active" type="button">隐私政策</button>
+          <button class="tag-button" type="button">用户协议</button>
+          <button class="tag-button" type="button">售后说明</button>
+        </div>
+        ${renderRichEditor("协议正文", "填写协议内容，保存后供前台下单和会员中心引用。", { name: "agreementBody", value: values.agreementBody || "" })}
+        <p class="hint-line">协议内容会保存到后端配置，前台展示入口可在后续版本接入。</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderPaymentConfig() {
+  setTitle("系统设置 / 支付配置", "系统设置 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("系统设置 / 支付配置", "保存配置")}
+      <div class="detail-grid">
+        <div class="detail-card">
+          <div class="form-grid">
+            ${renderField("微信支付商户号", values.wechatMchId || "", { name: "wechatMchId", placeholder: "填写商户号" })}
+            ${renderField("小程序 AppID", values.miniProgramAppId || "", { name: "miniProgramAppId", placeholder: "填写 AppID" })}
+            ${renderField("支付回调地址", values.payNotifyUrl || "", { name: "payNotifyUrl", wide: true, placeholder: "https://api.example.com/api/pay/notify" })}
+            ${renderField("退款回调地址", values.refundNotifyUrl || "", { name: "refundNotifyUrl", wide: true, placeholder: "https://api.example.com/api/refund/notify" })}
+          </div>
+        </div>
+        <aside class="detail-card side-card">
+          <h3>支付能力</h3>
+          <div class="side-row"><span>前台下单支付</span>${renderSwitch(false)}</div>
+          <div class="side-row"><span>后台退款处理</span>${renderSwitch(false)}</div>
+          <div class="side-row"><span>支付结果同步</span>${renderSwitch(false)}</div>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function renderLogisticsConfig() {
+  setTitle("系统设置 / 物流与运费", "系统设置 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("系统设置 / 物流与运费", "保存模板")}
+      <div class="detail-grid">
+        <div class="detail-card">
+          <div class="form-grid">
+            ${renderSelectField("默认快递公司", ["待选择", "圆通速递", "顺丰速运", "中通快递", "韵达快递"], values.defaultCarrier || "待选择", { name: "defaultCarrier" })}
+            ${renderField("默认运费", values.defaultFreight || "", { name: "defaultFreight", placeholder: "例如：8" })}
+            ${renderField("包邮门槛", values.freeShippingLimit || "", { name: "freeShippingLimit", placeholder: "例如：满 99 包邮" })}
+            ${renderField("发货时效", values.deliveryWindow || "", { name: "deliveryWindow", placeholder: "例如：现货 48 小时内" })}
+            ${renderRichEditor("物流说明", "填写物流轨迹、发货规则、定制品发货周期。", { name: "logisticsNote", value: values.logisticsNote || "" })}
+          </div>
+        </div>
+        <aside class="detail-card side-card">
+          <h3>轨迹展示</h3>
+          <div class="side-row"><span>订单页显示物流公司</span>${renderSwitch(true)}</div>
+          <div class="side-row"><span>订单页显示运单号</span>${renderSwitch(true)}</div>
+          <div class="side-row"><span>支持复制单号</span>${renderSwitch(true)}</div>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function renderServiceConfig() {
+  setTitle("系统设置 / 客服配置", "系统设置 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("系统设置 / 客服配置", "保存配置")}
+      <div class="detail-card">
+        <div class="form-grid form-grid-three">
+          ${renderField("客服电话", values.servicePhone || "", { name: "servicePhone", placeholder: "填写客服电话" })}
+          ${renderField("企业微信", values.wechatWork || "", { name: "wechatWork", placeholder: "填写企业微信链接或 ID" })}
+          ${renderField("服务时间", values.serviceHours || "", { name: "serviceHours", placeholder: "例如：10:00 - 22:00" })}
+          ${renderField("客服入口文案", values.serviceLabel || "", { name: "serviceLabel", wide: true, placeholder: "例如：联系主理人确认定制细节" })}
+          ${renderRichEditor("自动回复", "填写前台咨询提交后展示的确认话术。", { name: "autoReply", value: values.autoReply || "" })}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderLogsConfig() {
+  setTitle("系统设置 / 操作日志", "系统设置 / 第二层");
+  const columns = [
+    { key: "time", label: "时间" },
+    { key: "account", label: "账号" },
+    { key: "action", label: "动作" },
+    { key: "target", label: "对象" },
+    { key: "result", label: "结果", type: "status" },
+  ];
+  return `
+    <section class="detail-page">
+      <div class="detail-head">
+        <h2>系统设置 / 操作日志</h2>
+        <button class="ghost-button" type="button" data-back>返回</button>
+      </div>
+      <div class="detail-card">
+        ${renderTable(columns, [])}
+        <p class="hint-line">接入账号登录后，这里会记录新增、编辑、发货、退款等关键后台操作。</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderBasicConfig() {
+  setTitle("系统设置 / 基础信息", "系统设置 / 第二层");
+  const values = settingValues();
+  return `
+    <section class="detail-page">
+      ${renderDetailHead("系统设置 / 基础信息", "保存信息")}
+      <div class="detail-grid">
+        <div class="detail-card">
+          <div class="form-grid">
+            ${renderField("品牌名称", values.brandName || "", { name: "brandName", placeholder: "填写品牌名称" })}
+            ${renderField("客服电话", values.brandPhone || "", { name: "brandPhone", placeholder: "填写客服电话" })}
+            ${renderField("业务域名", values.siteDomain || "", { name: "siteDomain", placeholder: "例如：www.zundahudong.com" })}
+            ${renderField("接口域名", values.apiDomain || "", { name: "apiDomain", placeholder: "例如：api.zundahudong.com" })}
+            ${renderRichEditor("页脚说明", "填写备案、售后提示、门店说明等基础内容。", { name: "footerNote", value: values.footerNote || "" })}
+          </div>
+        </div>
+        <aside class="detail-card side-card">
+          <h3>品牌资源</h3>
+          <div class="upload-row">${renderUploadSlot("上传 Logo")}<span class="thumb-box"></span></div>
+          <div class="upload-row">${renderUploadSlot("上传封面")}<span class="thumb-box is-wide-thumb"></span></div>
+        </aside>
       </div>
     </section>
   `;
@@ -1035,6 +1286,18 @@ function renderLeadDetail() {
   const demand = isBooking
     ? [raw.type, raw.time, raw.note].filter(Boolean).join(" / ")
     : [raw.topic, raw.message].filter(Boolean).join(" / ");
+  const hasLead = Boolean(lead.id || lead.customer || lead.phone);
+  if (!hasLead) {
+    return `
+      <section class="detail-page">
+        <div class="detail-head">
+          <h2>线索管理 / 线索详情</h2>
+          <button class="ghost-button" type="button" data-back>返回列表</button>
+        </div>
+        ${renderAdminEmpty("请选择一条真实线索", "从线索列表点击跟进后，这里会显示客户来源、联系方式和跟进记录。")}
+      </section>
+    `;
+  }
   return `
     <section class="detail-page">
       <div class="detail-head">
@@ -1095,7 +1358,7 @@ function renderFallbackSecondary(id) {
     return renderContent();
   }
 
-  const parentLabel = navItems.find((item) => item.id === page.parent)?.label || "品牌后台";
+  const parentLabel = navItems.find((item) => item.id === page.parent)?.label || "运营后台";
   setTitle(page.title, `${parentLabel} / 第二层`);
   const columns = page.columns.map((label, index) => ({ key: `col${index}`, label, type: label === "状态" ? "status" : label === "操作" ? "action" : "" }));
   const rows = [];
@@ -1119,7 +1382,7 @@ function renderFallbackSecondary(id) {
 }
 
 function renderDashboard() {
-  setTitle("数据看板", "品牌后台");
+  setTitle("数据看板", "运营后台");
   const columns = [
     { key: "no", label: "订单号" },
     { key: "member", label: "会员" },
@@ -1189,7 +1452,7 @@ function renderDashboard() {
 
 function renderListPage(section) {
   const config = pageConfigs[section];
-  setTitle(config.title, "品牌后台");
+  setTitle(config.title, "运营后台");
   const rows = filterRows(config.rows, config);
 
   return `
@@ -1268,7 +1531,7 @@ function detailForAdd(section) {
 }
 
 function renderContentHome() {
-  setTitle("内容管理", "品牌后台");
+  setTitle("内容管理", "运营后台");
   return `
     <section class="section-panel">
       <div class="section-head">
@@ -1283,7 +1546,7 @@ function renderContentHome() {
 }
 
 function renderSettingsHome() {
-  setTitle("系统设置", "品牌后台");
+  setTitle("系统设置", "运营后台");
   return `
     <section class="section-panel">
       <div class="section-head">
@@ -1307,7 +1570,15 @@ function renderSecondaryPage(id) {
     "coupon-create": renderCouponEditor,
     "lead-detail": renderLeadDetail,
     banner: renderBannerEditor,
+    recommend: renderRecommendConfig,
+    story: renderStoryConfig,
+    agreement: renderAgreementConfig,
     account: renderAccountRoles,
+    pay: renderPaymentConfig,
+    logistics: renderLogisticsConfig,
+    service: renderServiceConfig,
+    logs: renderLogsConfig,
+    basic: renderBasicConfig,
   };
   return renderers[id] ? renderers[id]() : renderFallbackSecondary(id);
 }
@@ -1323,6 +1594,7 @@ function renderContent() {
 function render() {
   renderNav();
   nodes.content.innerHTML = renderContent();
+  document.title = `${nodes.title.textContent || "运营后台"}｜果壳铃手作铺`;
   nodes.search.value = state.search;
   if (nodes.status) {
     nodes.status.textContent = state.backend.loading ? "连接中" : state.backend.connected ? "数据已连接" : "本地预览";
@@ -1344,6 +1616,13 @@ function bindEvents() {
 
   nodes.search.addEventListener("input", (event) => {
     state.search = event.target.value;
+    render();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !state.detail) return;
+    state.detail = "";
+    state.selectedId = "";
     render();
   });
 
@@ -1422,7 +1701,7 @@ function bindEvents() {
         render();
         return;
       }
-      showToast(`「${add.dataset.addAction}」已预留，下一步可接表单与接口`);
+      showToast(`「${add.dataset.addAction}」入口已打开，先从对应列表维护数据`);
       return;
     }
 

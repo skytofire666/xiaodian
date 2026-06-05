@@ -3,11 +3,16 @@ const path = require("path");
 const mysql = require("mysql2/promise");
 const { BASE_TABLES, BUSINESS_TABLES, ensureFullMysqlSchema } = require("../db/schema");
 
-const rootDir = path.resolve(__dirname, "..");
+const serverDir = path.resolve(__dirname, "..");
+const projectRoot = path.resolve(serverDir, "..");
 
 function loadLocalEnv() {
-  [".env.local", ".env"].forEach((fileName) => {
-    const filePath = path.join(rootDir, fileName);
+  [
+    path.join(projectRoot, ".env.local"),
+    path.join(projectRoot, ".env"),
+    path.join(serverDir, ".env.local"),
+    path.join(serverDir, ".env"),
+  ].forEach((filePath) => {
     if (!fs.existsSync(filePath)) return;
 
     fs.readFileSync(filePath, "utf8")

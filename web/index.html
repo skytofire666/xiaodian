@@ -153,7 +153,7 @@
           </div>
 
           <div class="product-grid" id="productGrid"></div>
-          <p class="empty-state" id="productEmpty" hidden>没有匹配到产品，试试“森系”“礼盒”或“车挂”。</p>
+          <div class="empty-state" id="productEmpty" hidden>没有匹配到产品，试试“森系”“礼盒”或“车挂”。</div>
         </section>
 
         <section class="view" data-view="cases" aria-label="案例">
@@ -174,7 +174,7 @@
             <div>
               <p class="kicker">线下门店</p>
               <h2>门店与预约</h2>
-              <span class="open-status">营业中 · 今日 19:30 打烊</span>
+              <span class="open-status" id="storeOpenStatus">门店信息待配置</span>
             </div>
             <div class="title-actions">
               <button class="small-action ghost" type="button" data-action="open-navigation">导航</button>
@@ -185,7 +185,7 @@
           <div class="store-hero">
             <img src="./assets/forest-bell-dark.png" alt="门店手作桌面" />
             <div>
-              <p class="pill">杭州工作室</p>
+              <p class="pill" id="storeHeroLabel">线下门店</p>
               <h3>到店看实物、听铃音、选绳色</h3>
             </div>
           </div>
@@ -193,11 +193,11 @@
           <section class="info-list">
             <div>
               <span>地址</span>
-              <strong>杭州市西湖区灵隐路 88 号手作工作室</strong>
+              <strong id="storeAddress">后台填写门店地址后显示</strong>
             </div>
             <div>
               <span>营业</span>
-              <strong>周二至周日 11:00 - 19:30</strong>
+              <strong id="storeHours">后台配置营业时间后显示</strong>
             </div>
             <div>
               <span>服务</span>
@@ -258,8 +258,8 @@
             <div class="avatar" aria-hidden="true">森</div>
             <div>
               <p class="kicker">会员中心</p>
-              <h2>手作收藏家</h2>
-              <span>积分 268 · 收藏 5 件 · 待收货 1 单</span>
+              <h2 id="profileTitle">访客用户</h2>
+              <span id="profileSummary">积分 0 · 订单 0 单 · 待收货 0 单</span>
             </div>
           </div>
 
@@ -328,7 +328,7 @@
           <section class="points-card" aria-label="我的积分">
             <div>
               <span>我的积分</span>
-              <strong>1,280</strong>
+              <strong id="pointsBalance">0</strong>
             </div>
             <button type="button" data-action="points-checkin">签到</button>
           </section>
@@ -344,16 +344,7 @@
 
           <section class="points-section">
             <h3>积分明细</h3>
-            <div class="points-list">
-              <div>
-                <span>消费获得</span>
-                <strong>+128</strong>
-              </div>
-              <div>
-                <span>每日签到</span>
-                <strong>+5</strong>
-              </div>
-            </div>
+            <div class="points-list" id="pointsList"></div>
           </section>
 
           <button class="points-store-button" type="button" data-action="show-toast" data-toast="积分商城为二期功能">

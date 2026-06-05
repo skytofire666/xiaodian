@@ -1,82 +1,53 @@
-# 果壳铃手作铺第一版
+# 果壳铃手作铺
 
-这是给线下手作店准备的第一版店铺系统，包含移动端店铺页、本地后端接口、后台管理页和本地数据存储。
+这是一个线下手作店的第一版线上店铺系统，包含移动端前台、后台管理页、Node 接口服务和 MySQL 数据库建表脚本。
+
+## 目录结构
+
+```text
+web/       前台页面、样式、交互脚本和图片资源（web/assets）
+admin/     后台管理页面、样式和交互脚本
+serve/     Node 服务、数据库 schema、建表脚本和 JSON 兜底数据
+docs/      项目说明文档
+```
 
 ## 启动
 
 ```bash
+npm install
 npm start
 ```
 
 启动后打开：
 
-- 店铺页：http://localhost:3000
-- 后台页：http://localhost:3000/admin.html
+- 前台：http://localhost:3000
+- 后台：http://localhost:3000/admin
 - 健康检查：http://localhost:3000/api/health
 
-## 第一版功能
+前台默认只展示接口返回的真实数据；如果需要临时看设计样例，可以打开 `http://localhost:3000/?preview=1`。
 
-- 商品列表、商品详情、筛选和搜索
-- 案例展示
-- 咨询提交
-- 到店预约提交
-- 订单提交
-- AI 导购 Agent：回答选款、现货、定制、门店和预约问题
-- 后台修改门店资料
-- 后台新增/编辑商品
-- 后台查看订单、预约和咨询
-- 后台更新订单状态
+## 数据库
 
-## AI 导购 Agent
+复制 `.env.example` 为 `.env.local`，填入 MySQL 配置后执行：
 
-店铺页右下角有 `AI` 入口。当前第一版是本地规则型导购，会读取后台商品、案例和门店资料来回答：
-
-- 推荐送礼、车挂、包挂、入门款
-- 查询门店地址、营业时间和联系方式
-- 引导定制咨询
-- 引导到店预约
-- 引导用户打开商品详情
-
-接口地址：
-
-```text
-POST /api/agent/chat
+```bash
+npm run db:setup
 ```
 
-示例：
+建表脚本位于 `serve/scripts/setup-database.js`，表结构位于 `serve/db/schema.js`。表说明见 `docs/database-schema.md`。
 
-```json
-{
-  "message": "我想送新车朋友，推荐什么"
-}
-```
+## 运行数据
 
-后面如果要接真正的大模型，可以在这个接口里加模型服务，让 Agent 继续使用现有商品和门店数据作为知识来源。
+- `serve/data/store.seed.json`：JSON 模式下的初始兜底数据，可以提交到 GitHub。
+- `serve/data/store.json`：JSON 模式运行后自动生成，不提交到 GitHub。
+- MySQL 模式下，真实业务数据写入数据库，本地假数据不会导入数据库。
 
-当前已经接入 DeepSeek V4 Pro。密钥放在本机 `.env.local`，不会提交到 GitHub：
+## 部署提醒
 
-```text
-DEEPSEEK_API_KEY=...
-DEEPSEEK_MODEL=deepseek-v4-pro
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-```
+部署到服务器后，推荐同域名转发：
 
-后端启动时会自动读取 `.env.local`。如果 DeepSeek 暂时不可用，Agent 会自动回退到本地规则导购。
+- `/` 指向前台
+- `/admin` 指向后台
+- `/api` 指向 Node 接口
 
-## 数据文件
-
-- `data/store.seed.json`：初始种子数据，可以提交到 GitHub
-- `data/store.json`：运行后自动生成，保存真实订单、预约、咨询和后台修改内容，不提交到 GitHub
-
-如果想恢复初始数据，停止服务后删除 `data/store.json`，再重新启动即可。
-
-## 下一步上线准备
-
-第一版先不接微信支付。后续准备正式上线时，再补充：
-
-- 真实门店地址、电话、客服微信
-- 商品图片、价格、库存和规格
-- 服务器域名
-- 数据库方案
-- 微信支付商户号
-- 登录、权限和短信/微信通知
+当前前台和后台默认都不启用演示数据，数据库为空时会显示空态。正式公开前建议先补后台登录和权限保护。

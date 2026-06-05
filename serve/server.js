@@ -6,10 +6,13 @@ const path = require("path");
 const { URL } = require("url");
 const { ensureBusinessMysqlSchema } = require("./db/schema");
 
-const rootDir = __dirname;
+const serverDir = __dirname;
+const projectRoot = path.resolve(serverDir, "..");
+const webDir = path.join(projectRoot, "web");
+const adminDir = path.join(projectRoot, "admin");
 loadLocalEnv();
 
-const dataDir = path.join(rootDir, "data");
+const dataDir = path.join(serverDir, "data");
 const dataFile = process.env.XIAODIAN_DATA_FILE || path.join(dataDir, "store.json");
 const seedFile = path.join(dataDir, "store.seed.json");
 const port = Number(process.env.PORT || 3000);
@@ -28,8 +31,12 @@ const mimeTypes = {
 };
 
 function loadLocalEnv() {
-  [".env.local", ".env"].forEach((fileName) => {
-    const filePath = path.join(rootDir, fileName);
+  [
+    path.join(projectRoot, ".env.local"),
+    path.join(projectRoot, ".env"),
+    path.join(serverDir, ".env.local"),
+    path.join(serverDir, ".env"),
+  ].forEach((filePath) => {
     if (!fsSync.existsSync(filePath)) return;
     const lines = fsSync.readFileSync(filePath, "utf8").split(/\r?\n/);
     lines.forEach((line) => {
@@ -88,7 +95,7 @@ async function ensureStore() {
 async function readStore() {
   await ensureStore();
   const raw = await fs.readFile(dataFile, "utf8");
-  return JSON.parse(raw);
+  return normalizeStoreShape(JSON.parse(raw));
 }
 
 async function writeStore(store) {
@@ -119,6 +126,29 @@ function parseJsonText(value, fallback = []) {
   } catch {
     return fallback;
   }
+}
+
+function parseJsonValue(value, fallback = {}) {
+  if (value && typeof value === "object") return value;
+  if (value === null || value === undefined || value === "") return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeStoreShape(store = {}) {
+  return {
+    storeInfo: store.storeInfo || {},
+    products: Array.isArray(store.products) ? store.products : [],
+    cases: Array.isArray(store.cases) ? store.cases : [],
+    orders: Array.isArray(store.orders) ? store.orders : [],
+    bookings: Array.isArray(store.bookings) ? store.bookings : [],
+    consultations: Array.isArray(store.consultations) ? store.consultations : [],
+    settings: store.settings && typeof store.settings === "object" ? store.settings : {},
+  };
 }
 
 function mysqlConfig() {
@@ -274,6 +304,10 @@ async function readMysqlStore() {
   const [orderRows] = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
   const [bookingRows] = await pool.query("SELECT * FROM bookings ORDER BY created_at DESC");
   const [consultRows] = await pool.query("SELECT * FROM consultations ORDER BY created_at DESC");
+  const [settingRows] = await pool.query("SELECT setting_key, setting_value FROM system_settings");
+  const settings = Object.fromEntries(
+    settingRows.map((row) => [row.setting_key, parseJsonValue(row.setting_value)])
+  );
 
   return {
     storeInfo: {
@@ -352,6 +386,7 @@ async function readMysqlStore() {
       status: row.status,
       createdAt: row.created_at_text,
     })),
+    settings,
   };
 }
 
@@ -593,6 +628,37 @@ function normalizeCase(input, existing = {}) {
     thumbY: text(input.thumbY, existing.thumbY || "50%"),
     active: input.active === false || input.active === "false" ? false : true,
   };
+}
+
+function normalizeSettingKey(value) {
+  const key = text(value).replace(/[^a-zA-Z0-9_.-]/g, "");
+  if (!key) throw new Error("配置键不能为空");
+  return key.slice(0, 120);
+}
+
+function settingGroup(key) {
+  return key.includes(".") ? key.split(".")[0] : "general";
+}
+
+async function saveAdminSetting(store, keyValue, values = {}) {
+  const key = normalizeSettingKey(keyValue);
+  const payload = values && typeof values === "object" ? values : {};
+  if (useMysql()) {
+    const pool = await getMysqlPool();
+    await pool.query(
+      `INSERT INTO system_settings (setting_key, setting_value, group_name, description)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), group_name = VALUES(group_name), description = VALUES(description)`,
+      [key, jsonText(payload, {}), settingGroup(key), "后台配置页保存"]
+    );
+  } else {
+    store.settings = {
+      ...(store.settings || {}),
+      [key]: payload,
+    };
+    await writeStore(store);
+  }
+  return { key, values: payload };
 }
 
 function includesAny(value, keywords) {
@@ -1026,6 +1092,23 @@ async function handleAdminApi(request, response, store, id, action) {
     return;
   }
 
+  if (request.method === "GET" && id === "settings") {
+    if (action) {
+      const key = normalizeSettingKey(action);
+      sendJson(response, 200, { key, values: store.settings?.[key] || {} });
+      return;
+    }
+    sendJson(response, 200, store.settings || {});
+    return;
+  }
+
+  if ((request.method === "PATCH" || request.method === "PUT" || request.method === "POST") && id === "settings" && action) {
+    const body = await readBody(request);
+    const result = await saveAdminSetting(store, action, body);
+    sendJson(response, 200, result);
+    return;
+  }
+
   if (request.method === "PATCH" && id === "store") {
     const body = await readBody(request);
     store.storeInfo = {
@@ -1108,10 +1191,22 @@ async function handleAdminApi(request, response, store, id, action) {
 
 async function serveStatic(response, url) {
   const pathname = decodeURIComponent(url.pathname);
-  const routePath = pathname === "/" ? "/index.html" : pathname === "/admin" ? "/admin.html" : pathname;
-  const filePath = path.normalize(path.join(rootDir, routePath));
+  let baseDir = webDir;
+  let routePath = pathname;
 
-  if (!filePath.startsWith(rootDir)) {
+  if (pathname === "/") {
+    routePath = "/index.html";
+  } else if (pathname === "/admin" || pathname === "/admin/") {
+    baseDir = adminDir;
+    routePath = "/admin.html";
+  } else if (pathname.startsWith("/admin/")) {
+    baseDir = adminDir;
+    routePath = pathname.slice("/admin".length);
+  }
+
+  const filePath = path.normalize(path.join(baseDir, routePath));
+
+  if (!filePath.startsWith(baseDir)) {
     sendError(response, 403, "访问路径不允许");
     return;
   }
@@ -1144,5 +1239,5 @@ const server = http.createServer(async (request, response) => {
 
 server.listen(port, () => {
   console.log(`果壳铃手作铺已启动：http://localhost:${port}`);
-  console.log(`后台管理：http://localhost:${port}/admin.html`);
+  console.log(`后台管理：http://localhost:${port}/admin`);
 });

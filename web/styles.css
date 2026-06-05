@@ -51,6 +51,37 @@ textarea {
 
 button {
   cursor: pointer;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease;
+}
+
+button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(120, 168, 232, 0.86);
+  outline-offset: 3px;
+}
+
+body.has-overlay {
+  overflow: hidden;
 }
 
 [data-action="open-cart"] {
@@ -184,6 +215,22 @@ svg {
 
 .view.is-active {
   display: block;
+}
+
+.app-shell.is-changing-view .view.is-active {
+  animation: viewIn 220ms ease both;
+}
+
+.app-shell.is-loading .screen::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  z-index: 16;
+  display: block;
+  height: 3px;
+  margin: 0 -14px;
+  background: linear-gradient(90deg, transparent, var(--blue), var(--brass), transparent);
+  animation: loadingSweep 1.15s ease-in-out infinite;
 }
 
 .detail-view {
@@ -414,6 +461,11 @@ svg {
   grid-auto-columns: 92%;
 }
 
+.horizontal-list:has(> .empty-state),
+.case-strip:has(> .empty-state) {
+  grid-auto-columns: 100%;
+}
+
 .horizontal-list > *,
 .case-strip > * {
   scroll-snap-align: start;
@@ -425,6 +477,22 @@ svg {
   border-radius: var(--radius);
   background: var(--card);
   overflow: hidden;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.product-card:hover,
+.case-card:hover,
+.product-card:focus-within,
+.case-card:focus-within {
+  border-color: rgba(216, 186, 116, 0.38);
+  background: rgba(31, 42, 36, 0.98);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
 }
 
 .product-card {
@@ -806,6 +874,10 @@ svg {
   font-weight: 850;
 }
 
+.open-status.is-muted {
+  color: var(--muted);
+}
+
 .title-actions {
   display: flex;
   gap: 8px;
@@ -1067,9 +1139,48 @@ svg {
 }
 
 .empty-state {
-  margin: 26px 0 0;
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 20px;
+  border: 1px dashed rgba(219, 229, 214, 0.18);
+  border-radius: var(--radius);
+  background: rgba(19, 27, 23, 0.58);
   color: var(--muted);
   text-align: center;
+  line-height: 1.6;
+}
+
+.empty-state strong {
+  color: #f6faf4;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.empty-state span {
+  max-width: 24em;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.empty-state button {
+  min-height: 36px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--blue);
+  color: #102138;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.mini-related > div > .empty-state {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 .store-hero {
@@ -1400,6 +1511,13 @@ svg {
   color: #9dc989;
 }
 
+.points-list > .empty-state {
+  display: grid;
+  min-height: 148px;
+  margin: 0;
+  padding: 18px;
+}
+
 .points-store-button {
   position: fixed;
   left: 50%;
@@ -1567,8 +1685,9 @@ svg {
 }
 
 .bottom-nav button.is-active {
-  background: rgba(84, 116, 76, 0.42);
+  background: linear-gradient(180deg, rgba(91, 126, 82, 0.58), rgba(50, 77, 56, 0.54));
   color: #f2f7ef;
+  box-shadow: inset 0 0 0 1px rgba(235, 242, 232, 0.1), 0 8px 18px rgba(0, 0, 0, 0.22);
 }
 
 .sheet {
@@ -1757,6 +1876,10 @@ svg {
   display: grid;
   gap: 10px;
   margin-top: 14px;
+}
+
+.search-results > .empty-state {
+  margin: 0;
 }
 
 .search-result {
@@ -2745,5 +2868,42 @@ svg {
 
   .bottom-nav {
     border-radius: 0 0 24px 24px;
+  }
+}
+
+@keyframes viewIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loadingSweep {
+  0% {
+    transform: translateX(-72%);
+  }
+
+  50% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(72%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

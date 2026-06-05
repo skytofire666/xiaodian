@@ -168,10 +168,27 @@ const state = {
   activeCaseId: "",
   caseReturnScreen: "cases",
   cartReturnScreen: "products",
+  points: 0,
+  pointRecords: [],
+  checkedInToday: false,
 };
 
 const productFilterLabels = ["全部", "果壳铃", "包挂", "车挂", "礼盒", "定制"];
 const caseFilterLabels = ["全部", "车挂", "包挂", "礼盒", "门店"];
+
+const screenMeta = {
+  home: { title: "果壳铃手作铺", section: "首页" },
+  products: { title: "产品", section: "产品" },
+  cases: { title: "案例", section: "案例" },
+  store: { title: "门店", section: "门店" },
+  me: { title: "我的", section: "我的" },
+  points: { title: "积分中心", section: "我的" },
+  orders: { title: "我的订单", section: "我的" },
+  "product-detail": { title: "商品详情", section: "产品" },
+  "case-detail": { title: "案例详情", section: "案例" },
+  cart: { title: "购物袋", section: "产品" },
+  checkout: { title: "确认订单", section: "产品" },
+};
 let orders = [
   {
     id: "order-pay",
@@ -223,6 +240,14 @@ let storeInfo = {
   latitude: 30.245,
 };
 
+const previewMode = new URLSearchParams(window.location.search).get("preview") === "1";
+if (!previewMode) {
+  products = [];
+  cases = [];
+  orders = [];
+  storeInfo = normalizeStoreInfo();
+}
+
 const nodes = {
   screen: document.getElementById("screen"),
   homeProducts: document.getElementById("homeProducts"),
@@ -233,6 +258,14 @@ const nodes = {
   productEmpty: document.getElementById("productEmpty"),
   caseFilters: document.getElementById("caseFilters"),
   caseGrid: document.getElementById("caseGrid"),
+  profileTitle: document.getElementById("profileTitle"),
+  profileSummary: document.getElementById("profileSummary"),
+  pointsBalance: document.getElementById("pointsBalance"),
+  pointsList: document.getElementById("pointsList"),
+  storeOpenStatus: document.getElementById("storeOpenStatus"),
+  storeHeroLabel: document.getElementById("storeHeroLabel"),
+  storeAddress: document.getElementById("storeAddress"),
+  storeHours: document.getElementById("storeHours"),
   productDetailView: document.getElementById("productDetailView"),
   caseDetailView: document.getElementById("caseDetailView"),
   cartView: document.getElementById("cartView"),
@@ -274,6 +307,17 @@ function getApiBase() {
 
 const API_BASE = getApiBase();
 
+function normalizeStoreInfo(info = {}) {
+  return {
+    name: textValue(info.name, "门店信息待配置"),
+    address: textValue(info.address, "后台填写门店地址后，这里会显示导航信息。"),
+    phone: textValue(info.phone),
+    hours: textValue(info.hours),
+    longitude: Number(info.longitude) || 0,
+    latitude: Number(info.latitude) || 0,
+  };
+}
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -291,16 +335,25 @@ async function apiRequest(path, options = {}) {
 }
 
 async function loadRemoteData() {
+  const shell = document.querySelector(".app-shell");
+  shell?.classList.add("is-loading");
+  if (previewMode) {
+    state.apiOnline = false;
+    shell?.classList.remove("is-loading");
+    return;
+  }
   try {
     const data = await apiRequest("/bootstrap");
     products = Array.isArray(data.products) ? data.products : products;
     cases = Array.isArray(data.cases) ? data.cases : cases;
     orders = Array.isArray(data.orders) ? data.orders : orders;
-    storeInfo = data.storeInfo ? { ...storeInfo, ...data.storeInfo } : storeInfo;
+    storeInfo = normalizeStoreInfo(data.storeInfo || storeInfo);
     state.apiOnline = true;
   } catch (error) {
     state.apiOnline = false;
     console.warn("后端暂未启动，继续使用页面内置数据。", error);
+  } finally {
+    shell?.classList.remove("is-loading");
   }
 }
 
@@ -309,6 +362,7 @@ async function refreshOrders() {
   try {
     orders = await apiRequest("/orders");
     renderOrders();
+    renderMe();
   } catch (error) {
     console.warn("订单刷新失败。", error);
   }
@@ -403,22 +457,89 @@ function renderFilters(container, labels, active, action) {
     .join("");
 }
 
+function renderEmptyContent(title, text, action = {}) {
+  const button =
+    action.label && action.target
+      ? `<button type="button" data-nav-target="${escapeHtml(action.target)}">${escapeHtml(action.label)}</button>`
+      : "";
+  return `
+    <strong>${escapeHtml(title)}</strong>
+    <span>${escapeHtml(text)}</span>
+    ${button}
+  `;
+}
+
+function renderEmptyBlock(title, text, action = {}) {
+  return `<div class="empty-state">${renderEmptyContent(title, text, action)}</div>`;
+}
+
 function renderHome() {
-  nodes.homeProducts.innerHTML = products.slice(0, 3).map((product) => renderProductCard(product, { compact: true })).join("");
-  nodes.homeCases.innerHTML = cases.slice(0, 3).map((item) => renderCaseCard(item, { strip: true })).join("");
+  const featuredProducts = products.slice(0, 3);
+  const featuredCases = cases.slice(0, 3);
+  nodes.homeProducts.innerHTML = featuredProducts.length
+    ? featuredProducts.map((product) => renderProductCard(product, { compact: true })).join("")
+    : renderEmptyBlock("还没有上架商品", "后台新增商品后，这里会自动展示新品。", { label: "先预约到店", target: "store" });
+  nodes.homeCases.innerHTML = featuredCases.length
+    ? featuredCases.map((item) => renderCaseCard(item, { strip: true })).join("")
+    : renderEmptyBlock("还没有搭配案例", "后台添加案例后，首页会自动显示真实方案。", { label: "先看产品", target: "products" });
 }
 
 function renderProducts() {
   renderFilters(nodes.productFilters, productFilterLabels, state.productFilter, "set-product-filter");
   const filtered = products.filter(matchesProduct);
-  nodes.productGrid.innerHTML = filtered.map((product) => renderProductCard(product)).join("");
+  nodes.productGrid.innerHTML = filtered.length ? filtered.map((product) => renderProductCard(product)).join("") : "";
   nodes.productEmpty.hidden = filtered.length > 0;
+  if (!filtered.length) {
+    const hasCatalog = products.length > 0;
+    nodes.productEmpty.innerHTML = renderEmptyContent(
+      hasCatalog ? "没有匹配到产品" : "还没有上架商品",
+      hasCatalog ? "换个分类或关键词再试试。" : "后台添加商品后，这里会显示真实库存和价格。",
+      hasCatalog ? {} : { label: "先预约到店", target: "store" }
+    );
+  }
 }
 
 function renderCases() {
   renderFilters(nodes.caseFilters, caseFilterLabels, state.caseFilter, "set-case-filter");
   const filtered = cases.filter((item) => state.caseFilter === "全部" || item.type === state.caseFilter);
-  nodes.caseGrid.innerHTML = filtered.map((item) => renderCaseCard(item)).join("");
+  nodes.caseGrid.innerHTML = filtered.length
+    ? filtered.map((item) => renderCaseCard(item)).join("")
+    : renderEmptyBlock(
+        cases.length ? "没有匹配到案例" : "还没有搭配案例",
+        cases.length ? "换个案例分类再试试。" : "后台添加案例后，这里会展示真实客户方案。",
+        { label: "返回首页", target: "home" }
+      );
+}
+
+function renderMe() {
+  const receivingCount = orders.filter((order) => order.status === "待收货").length;
+  nodes.profileTitle.textContent = state.points || orders.length ? "手作收藏家" : "访客用户";
+  nodes.profileSummary.textContent = `积分 ${state.points} · 订单 ${orders.length} 单 · 待收货 ${receivingCount} 单`;
+}
+
+function renderPoints() {
+  nodes.pointsBalance.textContent = state.points.toLocaleString("zh-CN");
+  nodes.pointsList.innerHTML = state.pointRecords.length
+    ? state.pointRecords
+        .map(
+          (record) => `
+            <div>
+              <span>${escapeHtml(record.label)}</span>
+              <strong>+${escapeHtml(record.points)}</strong>
+            </div>
+          `
+        )
+        .join("")
+    : renderEmptyBlock("暂无积分明细", "完成订单、签到或分享后，这里会显示真实积分流水。");
+}
+
+function renderStore() {
+  const hasAddress = storeInfo.address && !storeInfo.address.includes("后台填写");
+  nodes.storeHeroLabel.textContent = storeInfo.name;
+  nodes.storeAddress.textContent = storeInfo.address;
+  nodes.storeHours.textContent = storeInfo.hours || "后台配置营业时间后显示";
+  nodes.storeOpenStatus.textContent = storeInfo.hours ? `营业时间 · ${storeInfo.hours}` : "门店信息待配置";
+  nodes.storeOpenStatus.classList.toggle("is-muted", !hasAddress);
 }
 
 function renderOrders() {
@@ -467,17 +588,28 @@ function setScreen(screen) {
   state.screen = screen;
   const shell = document.querySelector(".app-shell");
   const detailScreens = ["product-detail", "case-detail", "cart", "checkout"];
+  const previousScreen = shell.dataset.screen;
   shell.dataset.screen = screen;
+  shell.classList.toggle("is-changing-view", previousScreen !== screen);
   shell.classList.toggle("is-subpage", screen === "points" || screen === "orders" || detailScreens.includes(screen));
   shell.classList.toggle("is-detail-page", detailScreens.includes(screen));
   document.querySelectorAll("[data-view]").forEach((view) => {
     view.classList.toggle("is-active", view.dataset.view === screen);
   });
   document.querySelectorAll(".bottom-nav [data-nav-target]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.navTarget === screen);
+    const meta = screenMeta[screen];
+    const isActive = button.dataset.navTarget === screen || button.textContent.trim() === meta?.section;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-current", isActive ? "page" : "false");
   });
+  const meta = screenMeta[screen] || screenMeta.home;
+  document.title = `${meta.title}｜果壳铃手作铺`;
+  if (screen === "me") renderMe();
+  if (screen === "points") renderPoints();
+  if (screen === "store") renderStore();
   if (screen === "orders") renderOrders();
   nodes.screen.scrollTo({ top: 0, behavior: "smooth" });
+  window.setTimeout(() => shell.classList.remove("is-changing-view"), 260);
 }
 
 function miniPageHead(title, badge = "") {
@@ -528,6 +660,7 @@ function openSheet(title, html) {
   nodes.sheet.classList.toggle("is-mini-screen", html.includes("mini-screen"));
   nodes.sheet.classList.add("is-open");
   nodes.sheet.setAttribute("aria-hidden", "false");
+  document.body.classList.add("has-overlay");
 }
 
 function closeSheet() {
@@ -535,6 +668,7 @@ function closeSheet() {
   nodes.sheet.classList.remove("is-mini-screen");
   nodes.sheetContent.classList.remove("has-detail-actions");
   nodes.sheet.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("has-overlay");
 }
 
 function openProduct(productId) {
@@ -757,17 +891,21 @@ function openGiftGuide() {
         <section class="mini-related gift-recommend">
           <h4>先看这些</h4>
           <div>
-            ${giftProducts
-              .map(
-                (product) => `
-                  <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
-                    <span style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></span>
-                    <strong>${escapeHtml(product.name)}</strong>
-                    <em>${money(product.price)}</em>
-                  </button>
-                `
-              )
-              .join("")}
+            ${
+              giftProducts.length
+                ? giftProducts
+                    .map(
+                      (product) => `
+                        <button type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
+                          <span style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></span>
+                          <strong>${escapeHtml(product.name)}</strong>
+                          <em>${money(product.price)}</em>
+                        </button>
+                      `
+                    )
+                    .join("")
+                : renderEmptyBlock("暂无可推荐商品", "后台添加商品并标记车挂、礼盒或现货后，这里会自动推荐。")
+            }
           </div>
         </section>
       </section>
@@ -990,6 +1128,7 @@ function buildMapUrl(mode = "walk") {
 }
 
 function openNavigation() {
+  const hasLocation = Boolean(Number(storeInfo.longitude) && Number(storeInfo.latitude));
   openSheet(
     "到店导航",
     `
@@ -1005,19 +1144,25 @@ function openNavigation() {
         <div><span>地址</span><strong>${escapeHtml(storeInfo.address)}</strong></div>
         <div><span>到店服务</span><strong>线下看实物、听铃音、选绳色，也可预约自提。</strong></div>
       </div>
-      <div class="route-summary">
-        <div><span>步行</span><strong>约 12 分钟</strong></div>
-        <div><span>驾车</span><strong>约 8 分钟</strong></div>
-        <div><span>公交</span><strong>约 18 分钟</strong></div>
-      </div>
-      <div class="option-grid" data-sheet-group="route">
-        <button class="is-selected" type="button" data-value="walk">步行</button>
-        <button type="button" data-value="drive">驾车</button>
-        <button type="button" data-value="bus">公交</button>
-      </div>
+      ${
+        hasLocation
+          ? `
+            <div class="route-summary">
+              <div><span>步行</span><strong>高德地图估算</strong></div>
+              <div><span>驾车</span><strong>高德地图估算</strong></div>
+              <div><span>公交</span><strong>高德地图估算</strong></div>
+            </div>
+            <div class="option-grid" data-sheet-group="route">
+              <button class="is-selected" type="button" data-value="walk">步行</button>
+              <button type="button" data-value="drive">驾车</button>
+              <button type="button" data-value="bus">公交</button>
+            </div>
+          `
+          : renderEmptyBlock("导航未配置", "后台填写门店地址和经纬度后，用户就能从这里打开地图导航。")
+      }
       <div class="sheet-actions">
         <button class="secondary-action" type="button" data-action="copy-address">复制地址</button>
-        <button class="primary-action" type="button" data-action="open-map">打开地图</button>
+        <button class="primary-action" type="button" data-action="open-map" ${hasLocation ? "" : "disabled"}>打开地图</button>
       </div>
     `
   );
@@ -1050,7 +1195,7 @@ function openSearch() {
       const text = [item.title, item.type, item.summary, item.scene].join(" ").toLowerCase();
       return !value || text.includes(value);
     });
-    results.innerHTML = [
+    const items = [
       ...productHits.slice(0, 4).map(
         (product) => `
           <button class="search-result" type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
@@ -1067,7 +1212,10 @@ function openSearch() {
           </button>
         `
       ),
-    ].join("");
+    ];
+    results.innerHTML = items.length
+      ? items.join("")
+      : renderEmptyBlock(value ? "没有搜索结果" : "暂无可搜索内容", value ? "换个关键词再试试。" : "后台添加商品或案例后，这里会展示结果。");
   };
 
   render();
@@ -1286,6 +1434,7 @@ async function submitOrderForm(form) {
     });
     postMiniProgramEvent("orderSubmitted", { orderId: order.id, orderNo: order.orderNo, productId: payload.productId });
     orders = [order, ...orders.filter((item) => item.id !== order.id)];
+    renderMe();
     closeSheet();
     showToast("订单已提交，等待门店确认");
     setScreen("orders");
@@ -1295,6 +1444,10 @@ async function submitOrderForm(form) {
 }
 
 async function copyAddress() {
+  if (!storeInfo.address || storeInfo.address.includes("后台填写")) {
+    showToast("后台还没有配置门店地址");
+    return;
+  }
   try {
     await navigator.clipboard.writeText(storeInfo.address);
     showToast("门店地址已复制");
@@ -1318,7 +1471,27 @@ async function copyLogistics(orderId) {
   }
 }
 
+function checkInPoints() {
+  if (state.checkedInToday) {
+    showToast("今天已经签到过了");
+    return;
+  }
+  state.checkedInToday = true;
+  state.points += 5;
+  state.pointRecords.unshift({
+    label: "每日签到",
+    points: 5,
+  });
+  renderMe();
+  renderPoints();
+  showToast("签到成功，积分 +5");
+}
+
 function openMap() {
+  if (!Number(storeInfo.longitude) || !Number(storeInfo.latitude)) {
+    showToast("后台还没有配置门店经纬度");
+    return;
+  }
   const mode = document.querySelector('[data-sheet-group="route"] .is-selected')?.dataset.value || "walk";
   const url = buildMapUrl(mode);
   if (window.wx?.miniProgram?.postMessage) {
@@ -1406,7 +1579,7 @@ function bindEvents() {
       if (action === "copy-address") copyAddress();
       if (action === "copy-logistics") copyLogistics(button.dataset.orderId);
       if (action === "open-map") openMap();
-      if (action === "points-checkin") showToast("签到成功，积分 +5");
+      if (action === "points-checkin") checkInPoints();
       if (action === "play-tone") {
         const product = findProduct(productId);
         showToast(product ? `正在试听：${product.name} · ${product.tone}` : "正在试听铃音");
@@ -1446,6 +1619,12 @@ function bindEvents() {
     }
   });
 
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (nodes.sheet.classList.contains("is-open")) closeSheet();
+    if (nodes.agentPanel.classList.contains("is-open")) closeAgent();
+  });
+
   nodes.productSearch.addEventListener("input", (event) => {
     state.productQuery = event.target.value;
     renderProducts();
@@ -1474,6 +1653,9 @@ async function init() {
   renderHome();
   renderProducts();
   renderCases();
+  renderMe();
+  renderPoints();
+  renderStore();
   renderOrders();
   bindEvents();
   updateCartBadges();

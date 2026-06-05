@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1f211e" />
     <meta name="format-detection" content="telephone=no" />
-    <title>品牌后台｜果壳铃手作铺</title>
+    <title>运营后台｜果壳铃手作铺</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./admin.css" />
+    <link rel="stylesheet" href="/admin/admin.css" />
   </head>
   <body>
     <div class="admin-shell">
       <aside class="admin-sidebar" aria-label="后台主导航">
-        <a class="admin-brand" href="./index.html" aria-label="返回前台店铺">品牌后台</a>
+        <a class="admin-brand" href="/admin" aria-label="运营后台首页">运营后台</a>
         <nav class="admin-nav" id="adminNav"></nav>
       </aside>
 
       <main class="admin-main">
         <header class="admin-header">
           <div class="title-block">
-            <p id="adminCrumb">数据看板</p>
+            <p id="adminCrumb">运营后台</p>
             <h1 id="adminTitle">数据看板</h1>
           </div>
           <div class="header-actions">
@@ -30,7 +30,7 @@
               <input id="globalSearch" type="search" placeholder="搜索" autocomplete="off" />
             </label>
             <span class="backend-status" id="backendStatus">连接中</span>
-            <a class="shop-link" href="./index.html">查看前台</a>
+            <a class="shop-link" href="/">查看前台</a>
             <button class="avatar-button" type="button" aria-label="账号"></button>
           </div>
         </header>
@@ -40,6 +40,6 @@
     </div>
 
     <div class="admin-toast" id="adminToast" role="status"></div>
-    <script src="./admin.js"></script>
+    <script src="/admin/admin.js"></script>
   </body>
 </html>

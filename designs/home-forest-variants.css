@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --ink: #13211b;
   --moss: #244f40;
   --fern: #78966e;
@@ -425,7 +425,7 @@ button {
   width: 68px;
   height: 68px;
   border-radius: 14px;
-  background: url("../assets/hero-forest-bells.png") center / cover;
+  background: url("../web/assets/hero-forest-bells.png") center / cover;
 }
 
 .b-pick h3,
@@ -524,7 +524,7 @@ button {
   width: 118px;
   height: 118px;
   border-radius: 24px;
-  background-image: url("../assets/hero-forest-bells.png");
+  background-image: url("../web/assets/hero-forest-bells.png");
   background-size: cover;
 }
 
