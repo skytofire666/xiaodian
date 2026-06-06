@@ -1896,6 +1896,25 @@ function renderSettingsHome() {
   `;
 }
 
+function renderDetailHead(title, primary = "保存") {
+  return `
+    <div class="detail-head">
+      <div>
+        <h2>${escapeHtml(title)}</h2>
+        <div class="detail-assist" aria-label="配置状态">
+          <span>配置页</span>
+          <span>保存后生效</span>
+          <span>同步前台</span>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="ghost-button" type="button" data-back>取消</button>
+        <button class="primary-button" type="button" data-save-action="${escapeHtml(primary)}">${escapeHtml(primary)}</button>
+      </div>
+    </div>
+  `;
+}
+
 bindEvents();
 render();
 loadBackendData();

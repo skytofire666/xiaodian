@@ -1781,6 +1781,298 @@ function renderOrders() {
       .join("");
 }
 
+function checkoutSteps(active = "cart") {
+  const steps = [
+    ["cart", "清单"],
+    ["info", "信息"],
+    ["pay", "确认"],
+  ];
+  return `
+    <div class="checkout-steps" aria-label="确认流程">
+      ${steps
+        .map(
+          ([key, label], index) => `
+            <span class="${key === active ? "is-active" : ""}">
+              <em>${index + 1}</em>
+              ${label}
+            </span>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function openCart() {
+  const entries = getCartEntries();
+  const total = entries.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const itemCount = entries.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (state.screen !== "cart") {
+    state.cartReturnScreen = ["product-detail", "case-detail", "me"].includes(state.screen) ? state.screen : "products";
+  }
+  closeSheet();
+  nodes.cartView.innerHTML = `
+    <section class="mini-page cart-page">
+      ${miniPageHead("待确认清单")}
+      ${checkoutSteps("cart")}
+      <section class="cart-sheet">
+        <div class="cart-guide">
+          <span>到店/配送前确认</span>
+          <strong>${entries.length ? `${itemCount} 件手作待确认` : "先把喜欢的款式收进来"}</strong>
+          <p>下单前可以统一确认绳色、铃音、礼盒、配送方式和备注，减少来回沟通。</p>
+        </div>
+        ${
+          entries.length
+            ? `
+              <div class="cart-list">
+                ${entries
+                  .map(
+                    ({ product, quantity }) => `
+                      <article class="cart-item">
+                        <div class="cart-thumb" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};" aria-hidden="true"></div>
+                        <div>
+                          <h3>${escapeHtml(product.name)}</h3>
+                          <p>${escapeHtml(product.stock)} · ${escapeHtml(product.type)}</p>
+                          <strong>${money(product.price)}</strong>
+                        </div>
+                        <div class="cart-stepper" aria-label="调整数量">
+                          <button type="button" data-action="cart-quantity" data-product-id="${escapeHtml(product.id)}" data-delta="-1">-</button>
+                          <span>${quantity}</span>
+                          <button type="button" data-action="cart-quantity" data-product-id="${escapeHtml(product.id)}" data-delta="1">+</button>
+                        </div>
+                      </article>
+                    `
+                  )
+                  .join("")}
+              </div>
+              <div class="cart-summary">
+                <span>预估合计</span>
+                <strong>${money(total)}</strong>
+              </div>
+              <div class="cart-service">
+                <span>可备注祝福卡</span>
+                <span>可选到店自提</span>
+                <span>可改绳色铃音</span>
+              </div>
+              <div class="detail-actions checkout-actions">
+                <div>
+                  <span>预估合计</span>
+                  <strong>${money(total)}</strong>
+                </div>
+                <button class="primary-action" type="button" data-action="checkout-cart">去确认</button>
+              </div>
+            `
+            : `
+              <div class="cart-empty">
+                <strong>清单还是空的</strong>
+                <span>把喜欢的果壳铃先加入清单，再统一确认绳色、铃音和配送方式。</span>
+                <button class="primary-action" type="button" data-action="detail-back">去选款</button>
+              </div>
+            `
+        }
+      </section>
+    </section>
+  `;
+  setScreen("cart");
+}
+
+function openOrder(productId) {
+  const product = findProduct(productId);
+  if (!product) return;
+
+  state.activeProductId = product.id;
+  closeSheet();
+  nodes.checkoutView.innerHTML = `
+    <form class="mini-page checkout-mini-screen sheet-form" id="orderForm">
+      ${miniPageHead("结算确认", "小程序原生页")}
+      ${checkoutSteps("info")}
+      <section class="checkout-address checkout-block">
+        <span>收货 / 自提信息</span>
+        <label>
+          <input name="customerName" type="text" placeholder="姓名" />
+        </label>
+        <label>
+          <input name="contact" type="text" placeholder="手机号或微信号" />
+        </label>
+        <label>
+          <textarea rows="2" name="address" placeholder="详细地址，或填写到店自提时间"></textarea>
+        </label>
+      </section>
+      <section class="checkout-product">
+        <div class="checkout-thumb" style="background-position: ${escapeHtml(product.thumbX)} ${escapeHtml(product.thumbY)};"></div>
+        <div>
+          <h3>${escapeHtml(product.name)}</h3>
+          <p>${escapeHtml(product.type)} · ${escapeHtml(product.stock)}</p>
+        </div>
+        <strong>${money(product.price)}</strong>
+      </section>
+      <section class="checkout-block">
+        <span>服务选项</span>
+        <div class="mini-options" data-sheet-group="delivery">
+          <button class="is-selected" type="button" data-value="快递">快递</button>
+          <button type="button" data-value="到店自提">到店自提</button>
+          <button type="button" data-value="礼盒包装">礼盒包装</button>
+        </div>
+      </section>
+      <label class="checkout-note">
+        <textarea rows="2" name="note" placeholder="备注：绳色、铃音、祝福卡内容"></textarea>
+      </label>
+      <div class="checkout-total">
+        <div><span>优惠券</span><strong>暂无可用</strong></div>
+        <div><span>积分抵扣</span><strong>- ${money(0)}</strong></div>
+        <div><span>运费</span><strong>${money(0)}</strong></div>
+        <div><span>实付金额</span><strong>${money(product.price)}</strong></div>
+      </div>
+      <section class="checkout-address checkout-store">
+        <span>预约到店（可选）</span>
+        <div class="mini-store-row inline">
+          <strong>${escapeHtml(storeInfo.name)}</strong>
+          <span>${escapeHtml(storeInfo.address)}</span>
+        </div>
+      </section>
+      <div class="detail-actions checkout-actions">
+        <div>
+          <span>实付</span>
+          <strong>${money(product.price)}</strong>
+        </div>
+        <button class="primary-action" type="submit">微信支付</button>
+      </div>
+    </form>
+  `;
+  setScreen("checkout");
+}
+
+function openSearch() {
+  openSheet(
+    "搜索",
+    `
+      <div class="search-sheet">
+        <label class="search-field">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m16 16 5 5"></path>
+          </svg>
+          <input id="sheetSearchInput" type="search" placeholder="搜森系、礼盒、车挂、清亮" autocomplete="off" />
+        </label>
+        <div class="search-suggests">
+          <button type="button" data-search-keyword="车挂">车挂</button>
+          <button type="button" data-search-keyword="礼盒">礼盒</button>
+          <button type="button" data-search-keyword="现货">现货</button>
+          <button type="button" data-search-keyword="定制">定制</button>
+        </div>
+        <div class="search-results" id="sheetSearchResults"></div>
+      </div>
+    `
+  );
+  const input = document.getElementById("sheetSearchInput");
+  const results = document.getElementById("sheetSearchResults");
+
+  const render = () => {
+    const value = input.value.trim().toLowerCase();
+    const productHits = products.filter((product) => {
+      const text = [product.name, product.type, product.tags.join(" "), product.story].join(" ").toLowerCase();
+      return !value || text.includes(value);
+    });
+    const caseHits = cases.filter((item) => {
+      const text = [item.title, item.type, item.summary, item.scene].join(" ").toLowerCase();
+      return !value || text.includes(value);
+    });
+    const productItems = productHits.slice(0, 4).map(
+      (product) => `
+        <button class="search-result" type="button" data-action="open-product" data-product-id="${escapeHtml(product.id)}">
+          <span>产品</span>
+          <strong>${escapeHtml(product.name)}</strong>
+          <em>${money(product.price)}</em>
+        </button>
+      `
+    );
+    const caseItems = caseHits.slice(0, 3).map(
+      (item) => `
+        <button class="search-result" type="button" data-action="open-case" data-case-id="${escapeHtml(item.id)}">
+          <span>案例</span>
+          <strong>${escapeHtml(item.title)}</strong>
+          <em>${escapeHtml(item.type)}</em>
+        </button>
+      `
+    );
+
+    results.innerHTML = productItems.length || caseItems.length
+      ? `
+        ${productItems.length ? `<section><h3>产品</h3>${productItems.join("")}</section>` : ""}
+        ${caseItems.length ? `<section><h3>案例</h3>${caseItems.join("")}</section>` : ""}
+      `
+      : renderEmptyBlock(value ? "没有搜索结果" : "暂无可搜索内容", value ? "换个关键词再试试。" : "后台添加商品或案例后，这里会展示结果。");
+  };
+
+  render();
+  input.addEventListener("input", render);
+  document.querySelectorAll("[data-search-keyword]").forEach((button) => {
+    button.addEventListener("click", () => {
+      input.value = button.dataset.searchKeyword || "";
+      render();
+      input.focus();
+    });
+  });
+  input.focus();
+}
+
+function renderAgentMessages() {
+  if (!nodes.agentMessages || !nodes.agentQuick) return;
+
+  const messagesHtml = state.agentMessages
+    .map((message) => {
+      const productsHtml = message.products?.length
+        ? `<div class="agent-products">${message.products.map(renderAgentProduct).join("")}</div>`
+        : "";
+      return `
+        <div class="agent-message ${message.role}">
+          ${escapeHtml(message.content)}
+          ${productsHtml}
+        </div>
+      `;
+    })
+    .join("");
+
+  const loadingHtml = state.agentLoading
+    ? `
+      <div class="agent-message assistant is-thinking" aria-live="polite">
+        <span>正在思考</span>
+        <span class="thinking-dots" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </span>
+      </div>
+    `
+    : "";
+
+  nodes.agentMessages.innerHTML = `
+    <div class="agent-status-card">
+      <span>手作导购</span>
+      <strong>可以帮你按送礼场景、预算、铃音和到店需求筛选。</strong>
+    </div>
+    ${messagesHtml}${loadingHtml}
+  `;
+
+  const last = state.agentMessages[state.agentMessages.length - 1];
+  nodes.agentQuick.innerHTML = state.agentLoading
+    ? ""
+    : (last?.quickReplies || [])
+        .map((reply) => `<button type="button" data-action="agent-quick" data-message="${escapeHtml(reply)}">${escapeHtml(reply)}</button>`)
+        .join("");
+
+  if (nodes.agentInput) {
+    nodes.agentInput.disabled = state.agentLoading;
+    nodes.agentInput.placeholder = state.agentLoading ? "小助手正在思考..." : "问送礼、车挂、到店预约...";
+  }
+  const submitButton = nodes.agentForm?.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = state.agentLoading;
+    submitButton.textContent = state.agentLoading ? "思考中" : "发送";
+  }
+
+  nodes.agentMessages.scrollTop = nodes.agentMessages.scrollHeight;
+}
+
 async function init() {
   await loadRemoteData();
   renderHome();
