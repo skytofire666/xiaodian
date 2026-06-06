@@ -1648,6 +1648,139 @@ function bindEvents() {
   });
 }
 
+function orderStatusTone(status = "") {
+  if (status.includes("待付款") || status.includes("待确认")) return "is-wait";
+  if (status.includes("待发货") || status.includes("待收货")) return "is-info";
+  if (status.includes("完成")) return "is-success";
+  if (status.includes("退款")) return "is-danger";
+  return "is-muted";
+}
+
+function compactOrderStatusCounts() {
+  const statuses = ["待付款", "待发货", "待收货"];
+  return statuses
+    .map((status) => {
+      const count = orders.filter((order) => order.status === status).length;
+      return `<span><em>${count}</em>${status}</span>`;
+    })
+    .join("");
+}
+
+function renderMe() {
+  const receivingCount = orders.filter((order) => order.status === "待收货").length;
+  const pendingCount = orders.filter((order) => ["待确认", "待付款", "待发货"].includes(order.status)).length;
+  nodes.profileTitle.textContent = state.points || orders.length ? "手作收藏家" : "访客用户";
+  nodes.profileSummary.textContent = `积分 ${state.points} · 订单 ${orders.length} 单 · 待处理 ${pendingCount} 单 · 待收货 ${receivingCount} 单`;
+}
+
+function renderPoints() {
+  nodes.pointsBalance.textContent = state.points.toLocaleString("zh-CN");
+  const projected = orders.reduce((sum, order) => sum + Math.max(0, Math.floor(Number(order.price || 0) / 10)), 0);
+  const recordsHtml = state.pointRecords.length
+    ? state.pointRecords
+        .map(
+          (record) => `
+            <article class="points-ledger-item">
+              <span>
+                <strong>${escapeHtml(record.label)}</strong>
+                <small>已入账</small>
+              </span>
+              <em>+${escapeHtml(record.points)}</em>
+            </article>
+          `
+        )
+        .join("")
+    : renderEmptyBlock("暂无积分明细", "完成订单、签到或分享后，这里会显示真实积分流水。", {
+        label: "去看新品",
+        target: "products",
+      });
+
+  nodes.pointsList.innerHTML = `
+    <div class="points-insight">
+      <div>
+        <span>可用积分</span>
+        <strong>${state.points.toLocaleString("zh-CN")}</strong>
+      </div>
+      <div>
+        <span>待入账</span>
+        <strong>${projected}</strong>
+      </div>
+      <div>
+        <span>签到状态</span>
+        <strong>${state.checkedInToday ? "今日已签" : "今日未签"}</strong>
+      </div>
+    </div>
+    <div class="points-ledger">${recordsHtml}</div>
+  `;
+}
+
+function renderOrders() {
+  const list = document.getElementById("orderList");
+  if (!list) return;
+
+  document.querySelectorAll(".order-tabs button").forEach((button) => {
+    button.classList.toggle("is-selected", button.dataset.value === state.orderTab);
+  });
+
+  const filtered = orders.filter((order) => state.orderTab === "全部" || order.status === state.orderTab);
+  const overview = `
+    <section class="orders-overview" aria-label="订单概览">
+      <div>
+        <span>全部订单</span>
+        <strong>${orders.length}</strong>
+      </div>
+      <div class="orders-overview-status">${compactOrderStatusCounts()}</div>
+    </section>
+  `;
+
+  if (!filtered.length) {
+    list.innerHTML = `
+      ${overview}
+      <div class="orders-empty">
+        <strong>暂无相关订单</strong>
+        <span>下单后会在这里看到付款、发货、物流和售后进度。</span>
+        <button type="button" data-nav-target="products">去看新品</button>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML =
+    overview +
+    filtered
+      .map((order) => {
+        const timeline = Array.isArray(order.logistics) && order.logistics.length ? order.logistics[0] : order.currentNode || "订单处理中";
+        return `
+          <article class="order-card ${order.primary ? "is-pay" : ""}">
+            <div class="order-card-head">
+              <span class="order-status ${orderStatusTone(order.status)}">${escapeHtml(order.status)}</span>
+              <small>${escapeHtml(order.orderNo || "")}</small>
+            </div>
+            <div class="order-main">
+              <div class="order-thumb" style="background-position: ${escapeHtml(order.thumbX)} ${escapeHtml(order.thumbY)};" aria-hidden="true"></div>
+              <div class="order-info">
+                <div class="order-name" title="${escapeHtml(order.productName)}">${escapeHtml(order.productName)}</div>
+                <div class="order-meta-row">
+                  <span>${escapeHtml(order.spec || "规格待确认")}</span>
+                  <strong>${money(order.price)} × ${escapeHtml(order.quantity || 1)}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="order-progress">
+              <span></span>
+              <p>${escapeHtml(timeline)}</p>
+            </div>
+            <div class="order-card-footer">
+              <button class="${order.primary ? "primary" : ""}" type="button" data-action="order-action" data-order-id="${escapeHtml(order.id)}">
+                ${escapeHtml(order.action)}
+              </button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+}
+
 async function init() {
   await loadRemoteData();
   renderHome();

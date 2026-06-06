@@ -1712,6 +1712,190 @@ function bindEvents() {
   });
 }
 
+function countByStatus(rows = [], names = []) {
+  return rows.filter((row) => names.includes(row.status)).length;
+}
+
+function listMetricsFor(section, rows = []) {
+  const config = pageConfigs[section] || {};
+  const activeCount = rows.filter((row) => ["在售", "已上线", "营业", "进行中", "已成交", "已完成"].includes(row.status)).length;
+  const waitCount = countByStatus(rows, ["待确认", "待付款", "待发货", "待收货", "待跟进", "跟进中", "待上线"]);
+  const dangerCount = countByStatus(rows, ["退款中", "已关闭", "停用", "异常"]);
+  const searchLabel = state.search ? `搜索：${state.search}` : config.search || "支持搜索";
+  return [
+    { label: "当前数据", value: rows.length },
+    { label: "可用 / 生效", value: activeCount },
+    { label: "待处理", value: waitCount },
+    { label: dangerCount ? "风险项" : "筛选", value: dangerCount || searchLabel, wide: !dangerCount },
+  ];
+}
+
+function renderListMetrics(section, rows) {
+  return `
+    <div class="list-metrics" aria-label="列表概览">
+      ${listMetricsFor(section, rows)
+        .map(
+          (item) => `
+            <article class="${item.wide ? "is-wide" : ""}">
+              <span>${escapeHtml(item.label)}</span>
+              <strong>${escapeHtml(item.value)}</strong>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderDashboard() {
+  setTitle("数据看板", "运营后台");
+  const columns = [
+    { key: "no", label: "订单号" },
+    { key: "member", label: "会员" },
+    { key: "amount", label: "金额" },
+    { key: "status", label: "状态", type: "status" },
+    { key: "action", label: "操作", type: "action" },
+  ];
+  const pendingCount = data.orders.filter((item) => ["待确认", "待付款"].includes(item.status)).length;
+  const deliveryCount = data.orders.filter((item) => item.status === "待发货").length;
+  const bookingCount = data.leads.filter((item) => item.source === "到店预约").length;
+  const consultCount = data.leads.filter((item) => item.source !== "到店预约" && item.status !== "已成交").length;
+
+  return `
+    <div class="content-stack">
+      <section class="dashboard-hero">
+        <div>
+          <span>今日运营</span>
+          <h2>先处理订单和线索，再维护内容与商品。</h2>
+          <p>这里汇总真实后台数据，空数据时会保持清晰的录入入口，不再用演示数据填充。</p>
+        </div>
+        <div class="dashboard-hero-actions">
+          <button type="button" data-section-shortcut="orders">处理订单</button>
+          <button type="button" data-section-shortcut="leads">跟进线索</button>
+        </div>
+      </section>
+
+      <div class="stat-grid">
+        ${data.stats
+          .map(
+            (item) => `
+              <article class="stat-card ${item.tone === "warm" ? "is-warm" : ""}">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.value)}</strong>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+
+      <section class="ops-grid" aria-label="今日待办">
+        <button type="button" data-section-shortcut="orders" data-tab-shortcut="待确认">
+          <span>待确认订单</span>
+          <strong>${pendingCount}</strong>
+          <em>确认库存、联系方式和支付方式</em>
+        </button>
+        <button type="button" data-section-shortcut="orders" data-tab-shortcut="待发货">
+          <span>待发货</span>
+          <strong>${deliveryCount}</strong>
+          <em>补快递公司、单号和发货节点</em>
+        </button>
+        <button type="button" data-section-shortcut="leads">
+          <span>到店预约</span>
+          <strong>${bookingCount}</strong>
+          <em>确认时间、选品和自提需求</em>
+        </button>
+        <button type="button" data-section-shortcut="leads">
+          <span>定制咨询</span>
+          <strong>${consultCount}</strong>
+          <em>记录绳色、铃音、礼盒需求</em>
+        </button>
+      </section>
+
+      <section class="section-panel">
+        <div class="section-head">
+          <div>
+            <h2>最近订单</h2>
+            <p>同步前台提交的订单，优先处理待确认和待发货。</p>
+          </div>
+          <div class="filter-group">
+            <button class="filter-chip" type="button">全部状态</button>
+            <button class="filter-chip" type="button">近 7 天</button>
+          </div>
+        </div>
+        ${renderTable(columns, filterRows(data.dashboardOrders))}
+      </section>
+    </div>
+  `;
+}
+
+function renderListPage(section) {
+  const config = pageConfigs[section];
+  setTitle(config.title, "运营后台");
+  const rows = filterRows(config.rows, config);
+
+  return `
+    <section class="section-panel">
+      <div class="section-head">
+        <div>
+          <h2>${escapeHtml(config.title)}</h2>
+          <p>${escapeHtml(config.desc || "支持筛选、搜索、分页与行操作。")}</p>
+        </div>
+        ${
+          config.addLabel
+            ? `<button class="primary-button" type="button" data-add-action="${escapeHtml(config.addLabel)}">+ ${escapeHtml(config.addLabel)}</button>`
+            : ""
+        }
+      </div>
+      ${renderListMetrics(section, rows)}
+      ${renderTabs(config)}
+      <div class="tool-row">
+        ${renderFilters(config.filters)}
+        ${renderSearch(config.search)}
+      </div>
+      ${renderTable(config.columns, rows)}
+      ${renderFooter(config.total)}
+    </section>
+  `;
+}
+
+function renderContentHome() {
+  setTitle("内容管理", "运营后台");
+  return `
+    <section class="section-panel hub-panel">
+      <div class="section-head">
+        <div>
+          <h2>内容管理</h2>
+          <p>首页运营、推荐位、品牌故事和协议内容集中维护。</p>
+        </div>
+      </div>
+      <div class="hub-note">
+        <span>内容会影响前台第一屏和转化入口</span>
+        <strong>建议先配置 Banner，再维护推荐位和品牌说明。</strong>
+      </div>
+      ${renderCards(contentCards, "content")}
+    </section>
+  `;
+}
+
+function renderSettingsHome() {
+  setTitle("系统设置", "运营后台");
+  return `
+    <section class="section-panel hub-panel">
+      <div class="section-head">
+        <div>
+          <h2>系统设置</h2>
+          <p>账号、支付、物流、客服和基础配置集中管理。</p>
+        </div>
+      </div>
+      <div class="hub-note">
+        <span>上线前必须检查</span>
+        <strong>支付参数、物流模板、客服入口和品牌基础信息。</strong>
+      </div>
+      ${renderCards(settingsCards, "settings")}
+    </section>
+  `;
+}
+
 bindEvents();
 render();
 loadBackendData();
