@@ -1196,7 +1196,11 @@ async function serveStatic(response, url) {
 
   if (pathname === "/") {
     routePath = "/index.html";
-  } else if (pathname === "/admin" || pathname === "/admin/") {
+  } else if (pathname === "/admin") {
+    response.writeHead(302, { Location: `/admin/${url.search || ""}` });
+    response.end();
+    return;
+  } else if (pathname === "/admin/") {
     baseDir = adminDir;
     routePath = "/admin.html";
   } else if (pathname.startsWith("/admin/")) {
