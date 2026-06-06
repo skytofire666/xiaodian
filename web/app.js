@@ -253,10 +253,12 @@ const nodes = {
   homeProducts: document.getElementById("homeProducts"),
   homeCases: document.getElementById("homeCases"),
   productFilters: document.getElementById("productFilters"),
+  productListSummary: document.getElementById("productListSummary"),
   productGrid: document.getElementById("productGrid"),
   productSearch: document.getElementById("productSearch"),
   productEmpty: document.getElementById("productEmpty"),
   caseFilters: document.getElementById("caseFilters"),
+  caseListSummary: document.getElementById("caseListSummary"),
   caseGrid: document.getElementById("caseGrid"),
   profileTitle: document.getElementById("profileTitle"),
   profileSummary: document.getElementById("profileSummary"),
@@ -487,6 +489,11 @@ function renderHome() {
 function renderProducts() {
   renderFilters(nodes.productFilters, productFilterLabels, state.productFilter, "set-product-filter");
   const filtered = products.filter(matchesProduct);
+  if (nodes.productListSummary) {
+    const filterText = state.productFilter === "全部" ? "全部产品" : state.productFilter;
+    const queryText = state.productQuery ? ` · 搜索「${state.productQuery}」` : "";
+    nodes.productListSummary.textContent = `${filterText}${queryText} · ${filtered.length}/${products.length} 款`;
+  }
   nodes.productGrid.innerHTML = filtered.length ? filtered.map((product) => renderProductCard(product)).join("") : "";
   nodes.productEmpty.hidden = filtered.length > 0;
   if (!filtered.length) {
@@ -502,6 +509,10 @@ function renderProducts() {
 function renderCases() {
   renderFilters(nodes.caseFilters, caseFilterLabels, state.caseFilter, "set-case-filter");
   const filtered = cases.filter((item) => state.caseFilter === "全部" || item.type === state.caseFilter);
+  if (nodes.caseListSummary) {
+    const filterText = state.caseFilter === "全部" ? "全部案例" : state.caseFilter;
+    nodes.caseListSummary.textContent = `${filterText} · ${filtered.length}/${cases.length} 个方案`;
+  }
   nodes.caseGrid.innerHTML = filtered.length
     ? filtered.map((item) => renderCaseCard(item)).join("")
     : renderEmptyBlock(

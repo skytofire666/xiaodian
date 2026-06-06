@@ -1220,6 +1220,16 @@ svg {
   color: #fff;
 }
 
+.list-summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  margin: -2px 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
 .utility-panel {
   padding: 12px;
   margin-bottom: 12px;

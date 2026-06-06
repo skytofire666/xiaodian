@@ -168,7 +168,7 @@ const pageConfigs = {
     addLabel: "创建优惠券",
     total: "共 0 条",
     tabKey: "marketing",
-    tabs: ["优惠券", "活动", "签到", "积分商城 二期"],
+    tabs: ["优惠券", "活动", "签到", "积分权益"],
     columns: [
       { key: "coupon", label: "券名" },
       { key: "type", label: "类型" },
@@ -823,7 +823,7 @@ async function saveCurrentDetail(actionLabel = "保存") {
     return;
   }
 
-  showToast(`「${actionLabel}」已记录，当前模块暂无更多必填项`);
+  showToast(`「${actionLabel}」已记录为本页配置`);
 }
 
 function renderProductEditor() {
